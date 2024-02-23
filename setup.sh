@@ -63,3 +63,7 @@ format() {
     ruff check --fix .
     ruff format .
 }
+
+vdbbench() {
+    python -m vdbbench $@
+}
