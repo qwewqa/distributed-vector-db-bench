@@ -1,3 +1,4 @@
+import time
 from elasticsearch import Elasticsearch, ConnectionError
 from vdbbench.benchmarks.benchmark import Benchmark
 
@@ -12,7 +13,22 @@ class TestElasticsearch(Benchmark):
         instance_hosts = config["elasticsearch_instance_names"]
 
         es_hosts = [{"host": host, "port": 9200, "scheme": "http"} for host in instance_hosts]
+
+        # Wait for the Elasticsearch cluster to be ready
+        start_time = time.monotonic()
+        timeout = 300
         es = Elasticsearch(hosts=es_hosts)
+        while time.monotonic() - start_time < timeout:
+            try:
+                es.cluster.health(wait_for_status="green")
+                break
+            except ConnectionError:
+                time.sleep(5)
+        else:
+            return {
+                "status": "failure",
+                "detail": "Elasticsearch cluster did not become ready within the timeout.",
+            }
 
         doc = {
             "author": "vdbbench",

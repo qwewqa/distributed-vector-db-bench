@@ -28,14 +28,14 @@ def retry_execute_runner(
 ):
     import time
 
-    start_time = time.time()
-    while True:
+    start_time = time.monotonic()
+    while time.monotonic() - start_time < timeout:
         try:
             return execute_runner(name, config)
         except paramiko.ssh_exception.NoValidConnectionsError:
-            if time.time() - start_time > timeout:
-                raise
             time.sleep(interval)
+    else:
+        raise TimeoutError("Runner did not become available within the timeout.")
 
 
 def execute_runner(name: str, config: dict) -> dict:
@@ -81,7 +81,7 @@ def execute_runner(name: str, config: dict) -> dict:
 
         output_path = "/tmp/vdbbench/output.json"
         if conn.run(f"test -f {output_path}", warn=True).ok:
-            return json.loads(conn.run(f"cat {output_path}").stdout)
+            return json.loads(conn.run(f"cat {output_path}", hide=True).stdout)
         else:
             raise FileNotFoundError(
                 "Benchmark output (output.json) not found on the runner."
