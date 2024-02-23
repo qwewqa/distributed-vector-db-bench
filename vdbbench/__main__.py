@@ -1,24 +1,35 @@
 import json
-from pathlib import Path
-import typer
 import logging
+import os
+from pathlib import Path
+
+import typer
+
 from vdbbench import benchmarks
 from vdbbench.runner import retry_execute_runner
-
 from vdbbench.terraform import destroy_all_terraform
 
 logger = logging.getLogger(__name__)
 app = typer.Typer()
 
 
-@app.command()
+@app.command(
+    help="Destroy all resources created by the benchmarks.",
+)
 def destroy_all():
     destroy_all_terraform()
 
 
-@app.command()
-def run(name: str):
+@app.command(
+    help="Run a benchmark.",
+)
+def run(
+    name: str = typer.Argument(..., help="The name of the benchmark to run."),
+):
     logger.info(f"Running benchmark for {name}")
+    if not os.environ.get("TF_VAR_project"):
+        logger.error("Environment variables are not set. Run `. setup.sh` to set them.")
+        return
     if name in benchmarks.BENCHMARKS:
         benchmark = benchmarks.BENCHMARKS[name]
         config = benchmark.deploy()

@@ -1,18 +1,26 @@
 import time
-from elasticsearch import Elasticsearch, ConnectionError
-from vdbbench.benchmarks.benchmark import Benchmark
 
+from elasticsearch import ConnectionError, Elasticsearch
+
+from vdbbench.benchmarks.benchmark import Benchmark
 from vdbbench.terraform import DatabaseDeployment, apply_terraform
 
 
 class TestElasticsearch(Benchmark):
+    """A test of the Elasticsearch database deployment.
+
+    Indexes a document and then retrieves it to verify that the cluster is working correctly.
+    """
+
     def deploy(self):
         return apply_terraform(DatabaseDeployment.ELASTICSEARCH)
 
     def run(self, config: dict) -> dict:
         instance_hosts = config["elasticsearch_instance_names"]
 
-        es_hosts = [{"host": host, "port": 9200, "scheme": "http"} for host in instance_hosts]
+        es_hosts = [
+            {"host": host, "port": 9200, "scheme": "http"} for host in instance_hosts
+        ]
 
         # Wait for the Elasticsearch cluster to be ready
         start_time = time.monotonic()
@@ -52,7 +60,7 @@ class TestElasticsearch(Benchmark):
         except ConnectionError as e:
             return {
                 "status": "failure",
-                "detail": f"Elasticsearch connection error: {str(e)}",
+                "detail": f"Elasticsearch connection error: {e!s}",
             }
         except Exception as e:
-            return {"status": "failure", "detail": f"Test failed with error: {str(e)}"}
+            return {"status": "failure", "detail": f"Test failed with error: {e!s}"}

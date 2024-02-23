@@ -41,6 +41,7 @@ if [ ! -d "venv" ]; then
     . venv/bin/activate
     echo "Installing dependencies from requirements.txt..."
     pip install -r requirements.txt
+    pip install ruff
 elif [ -z "$VIRTUAL_ENV" ]; then
     echo "Activating existing virtual environment..."
     . venv/bin/activate
@@ -56,4 +57,9 @@ connect_to_vm() {
   vm_ip="$1"
   username="${TF_VAR_ssh_user}"
   ssh -o UserKnownHostsFile=/dev/null -i "${private_key_path}" "${username}@${vm_ip}"
+}
+
+format() {
+    ruff check --fix .
+    ruff format .
 }
