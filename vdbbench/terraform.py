@@ -1,6 +1,7 @@
 import enum
 import json
 import logging
+import os
 import subprocess
 from pathlib import Path
 
@@ -29,52 +30,50 @@ def init_terraform(db: DatabaseDeployment):
         return
     logger.info(f"Initializing {db.name} module")
     module_dir = TERRAFORM_BASE_DIR / db
-    subprocess.run(["terraform", "init"], cwd=module_dir, check=False)
+    subprocess.run(["terraform", "init"], cwd=module_dir)
 
 
-def apply_terraform(db: DatabaseDeployment, destroy_existing: bool = False) -> dict:
+def apply_terraform(db: DatabaseDeployment, **kwargs) -> dict:
     """Applies the Terraform module for the given database deployment.
 
     Args:
         db: The database deployment to apply.
-        destroy_existing: Whether to destroy the existing deployment before applying the new one.
+        **kwargs: Variables to pass to the Terraform module.
 
     Returns:
         A dictionary containing the output values of the Terraform module.
-
     """
     init_terraform(db)
-    if destroy_existing:
-        destroy_terraform(db)
     logger.info(f"Applying {db.name} module")
     subprocess.run(
         ["terraform", "apply", "-auto-approve", "-json"],
         cwd=TERRAFORM_BASE_DIR / db,
-        check=False,
+        env=os.environ | {f"TF_VAR_{k}": str(v) for k, v in kwargs.items()},
     )
     output_json = subprocess.run(
         ["terraform", "output", "-json"],
         cwd=TERRAFORM_BASE_DIR / db,
         capture_output=True,
-        check=False,
     ).stdout
     output_data = json.loads(output_json)
     output_data = {k: v["value"] for k, v in output_data.items()}
     return output_data
 
 
-def destroy_terraform(db: DatabaseDeployment):
+def destroy_terraform(db: DatabaseDeployment, **kwargs):
     """Destroys the Terraform module for the given database deployment.
 
     Args:
         db: The database deployment to destroy.
-
+        **kwargs: Variables to pass to the Terraform module.
     """
     init_terraform(db)
     logger.info(f"Destroying {db.name} module")
     module_dir = TERRAFORM_BASE_DIR / db
     subprocess.run(
-        ["terraform", "destroy", "-auto-approve"], cwd=module_dir, check=False
+        ["terraform", "destroy", "-auto-approve"],
+        env=os.environ | {f"TF_VAR_{k}": str(v) for k, v in kwargs.items()},
+        cwd=module_dir,
     )
 
 
