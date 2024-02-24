@@ -1,18 +1,3 @@
-output "network_name" {
-  value       = google_compute_network.default.name
-  description = "The name of the network created for Elasticsearch."
-}
-
-output "firewall_ssh_name" {
-  value       = google_compute_firewall.ssh.name
-  description = "The name of the SSH firewall rule."
-}
-
-output "firewall_internal_name" {
-  value       = google_compute_firewall.internal.name
-  description = "The name of the internal firewall rule."
-}
-
 output "elasticsearch_instance_names" {
   value = [for instance in google_compute_instance.db_instances : instance.name]
   description = "The names of the Elasticsearch instances."
