@@ -95,8 +95,8 @@ def execute_runner(name: str, config: dict) -> dict:
         config_json_path = "/tmp/vdbbench/config.json"
         conn.put(io.BytesIO(config_json.encode()), config_json_path)
 
-        conn.run("sudo apt update")
-        conn.run("sudo apt install -y python3-pip python3-venv")
+        conn.run("sudo apt-get update")
+        conn.run("sudo apt-get install -y python3-pip python3-venv")
         conn.run("python3 -m venv /tmp/vdbbench/venv")
         conn.run(
             f". /tmp/vdbbench/venv/bin/activate && \
