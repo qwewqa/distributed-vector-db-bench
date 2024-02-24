@@ -1,8 +1,10 @@
-import time
-
-from elasticsearch import ConnectionError, Elasticsearch
+from elasticsearch import ConnectionError
 
 from vdbbench.benchmarks.benchmark import Benchmark
+from vdbbench.benchmarks.elasticsearch.common import (
+    create_elasticsearch_client,
+    wait_for_elasticsearch_cluster,
+)
 from vdbbench.terraform import DatabaseDeployment, apply_terraform
 
 
@@ -16,27 +18,8 @@ class TestElasticsearch(Benchmark):
         return apply_terraform(DatabaseDeployment.ELASTICSEARCH)
 
     def run(self, config: dict) -> dict:
-        instance_hosts = config["elasticsearch_instance_names"]
-
-        es_hosts = [
-            {"host": host, "port": 9200, "scheme": "http"} for host in instance_hosts
-        ]
-
-        # Wait for the Elasticsearch cluster to be ready
-        start_time = time.monotonic()
-        timeout = 300
-        es = Elasticsearch(hosts=es_hosts)
-        while time.monotonic() - start_time < timeout:
-            try:
-                es.cluster.health(wait_for_status="green")
-                break
-            except ConnectionError:
-                time.sleep(5)
-        else:
-            return {
-                "status": "failure",
-                "detail": "Elasticsearch cluster did not become ready within the timeout.",
-            }
+        es = create_elasticsearch_client(config)
+        wait_for_elasticsearch_cluster(es)
 
         doc = {
             "author": "vdbbench",

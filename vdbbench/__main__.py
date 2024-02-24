@@ -3,6 +3,7 @@ import logging
 import os
 import time
 from pathlib import Path
+import traceback
 from typing import Annotated
 
 import typer
@@ -70,7 +71,14 @@ def run_bench(name: str, config: Path):
     logger.info(f"Running benchmark for {name} with config {config}")
     config_data = json.loads(config.read_text())
     benchmark = benchmarks.BENCHMARKS[name]
-    result = benchmark.run(config_data)
+    try:
+        result = benchmark.run(config_data)
+    except Exception as e:
+        result = {
+            "status": "failure",
+            "detail": f"Run failed with error: {e}",
+            "traceback": f"{traceback.format_exc()}",
+        }
     Path("output.json").write_text(json.dumps(result))
 
 
