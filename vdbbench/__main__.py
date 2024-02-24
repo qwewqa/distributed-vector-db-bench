@@ -3,6 +3,7 @@ import logging
 import os
 import time
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -25,7 +26,12 @@ def destroy_all():
     help="Run a benchmark.",
 )
 def run(
-    name: str = typer.Argument(..., help="The name of the benchmark to run."),
+    name: Annotated[
+        str,
+        typer.Argument(
+            help="The name of the benchmark to run.",
+        ),
+    ],
 ):
     logger.info(f"Running benchmark for {name}")
     if not os.environ.get("TF_VAR_project"):
@@ -47,6 +53,16 @@ def save_results(name: str, results: dict):
     output_file = output_path / f"{name}_{time.strftime('%Y%m%d-%H%M%S')}.json"
     output_file.write_text(json.dumps(results, indent=2))
     logger.info(f"Results saved to {output_file}")
+
+
+@app.command(
+    name="list",
+    help="List available benchmarks.",
+)
+def list_benchmarks():
+    print("Available benchmarks:")
+    for name in benchmarks.BENCHMARKS:
+        print(f"  {name}")
 
 
 @app.command(hidden=True)
