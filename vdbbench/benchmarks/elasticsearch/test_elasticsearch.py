@@ -44,7 +44,7 @@ class TestElasticsearch(Benchmark):
         except ConnectionError as e:
             return {
                 "status": "failure",
-                "detail": f"Elasticsearch connection error: {e!s}",
+                "detail": f"Elasticsearch connection error: {e}",
             }
         except Exception as e:
-            return {"status": "failure", "detail": f"Test failed with error: {e!s}"}
+            return {"status": "failure", "detail": f"Test failed with error: {e}"}

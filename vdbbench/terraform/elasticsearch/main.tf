@@ -117,10 +117,4 @@ resource "google_compute_instance" "runner_instance" {
   metadata = {
     ssh-keys = "${var.ssh_user}:${var.ssh_public_key}"
   }
-
-  metadata_startup_script = <<-EOF
-        #!/bin/bash
-        mkdir -p /vdbbench
-        echo "test" > /vdbbench/test.txt
-        EOF
 }
