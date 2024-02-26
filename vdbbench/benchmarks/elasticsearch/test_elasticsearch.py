@@ -29,6 +29,7 @@ class TestElasticsearch(Benchmark):
         try:
             index_response = es.index(index="test-index", document=doc)
             retrieve_response = es.get(index="test-index", id=index_response["_id"])
+            es.indices.delete(index="test-index", ignore=[400, 404])
 
             if retrieve_response["_source"] == doc:
                 return {
