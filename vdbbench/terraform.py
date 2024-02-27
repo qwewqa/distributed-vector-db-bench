@@ -46,7 +46,7 @@ def apply_terraform(db: DatabaseDeployment, **kwargs) -> dict:
     init_terraform(db)
     logger.info(f"Applying {db.name} module")
     subprocess.run(
-        ["terraform", "apply", "-auto-approve", "-json"],
+        ["terraform", "apply", "-auto-approve"],
         cwd=TERRAFORM_BASE_DIR / db,
         env=os.environ | {f"TF_VAR_{k}": str(v) for k, v in kwargs.items()},
     )
