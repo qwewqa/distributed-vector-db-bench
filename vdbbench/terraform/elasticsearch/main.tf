@@ -85,6 +85,9 @@ resource "google_compute_instance" "db_instances" {
         cluster.initial_master_nodes: ["${join("\", \"", [for i in range(var.node_count) : "elasticsearch-${i}"])}"]
         EOT
 
+        # As recommended by Elasticsearch, disable swap for performance: https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-configuration-memory.html
+        sudo swapoff -a
+
         # Remove the default keystore since we're disabling security
         sudo rm /etc/elasticsearch/elasticsearch.keystore
         sudo /usr/share/elasticsearch/bin/elasticsearch-keystore create
