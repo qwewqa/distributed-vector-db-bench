@@ -1,3 +1,5 @@
+import traceback
+
 from elasticsearch import ConnectionError
 
 from vdbbench.benchmarks.benchmark import Benchmark
@@ -45,6 +47,11 @@ class TestElasticsearch(Benchmark):
             return {
                 "status": "failure",
                 "detail": f"Elasticsearch connection error: {e}",
+                "traceback": f"{traceback.format_exc()}",
             }
         except Exception as e:
-            return {"status": "failure", "detail": f"Test failed with error: {e}"}
+            return {
+                "status": "failure",
+                "detail": f"Test failed with error: {e}",
+                "traceback": f"{traceback.format_exc()}",
+            }

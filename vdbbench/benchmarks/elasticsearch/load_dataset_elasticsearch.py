@@ -1,4 +1,5 @@
 import logging
+import traceback
 from time import perf_counter
 
 from elasticsearch import ConnectionError
@@ -42,7 +43,9 @@ class LoadDatasetElasticsearch(Benchmark):
         wait_for_elasticsearch_cluster(es)
 
         try:
-            es.indices.delete(index=self.dataset.name, ignore=[400, 404], request_timeout=900)
+            es.indices.delete(
+                index=self.dataset.name, ignore=[400, 404], request_timeout=900
+            )
 
             logger.info(f"Creating index {self.dataset.name}")
             es.indices.create(
@@ -93,7 +96,9 @@ class LoadDatasetElasticsearch(Benchmark):
             )
 
             logger.info("Forcing merge index")
-            es.indices.forcemerge(index=self.dataset.name, max_num_segments=1, request_timeout=900)
+            es.indices.forcemerge(
+                index=self.dataset.name, max_num_segments=1, request_timeout=900
+            )
 
             logger.info("Refreshing index")
             es.indices.refresh(index=self.dataset.name, request_timeout=900)
@@ -127,7 +132,9 @@ class LoadDatasetElasticsearch(Benchmark):
             ), "Query returned wrong result"
 
             logger.info("Deleting index")
-            es.indices.delete(index=self.dataset.name, ignore=[400, 404], request_timeout=900)
+            es.indices.delete(
+                index=self.dataset.name, ignore=[400, 404], request_timeout=900
+            )
 
             return {
                 "status": "success",
@@ -138,6 +145,11 @@ class LoadDatasetElasticsearch(Benchmark):
             return {
                 "status": "failure",
                 "detail": f"Elasticsearch connection error: {e}",
+                "traceback": f"{traceback.format_exc()}",
             }
         except Exception as e:
-            return {"status": "failure", "detail": f"Test failed with error: {e}"}
+            return {
+                "status": "failure",
+                "detail": f"Test failed with error: {e}",
+                "traceback": f"{traceback.format_exc()}",
+            }
