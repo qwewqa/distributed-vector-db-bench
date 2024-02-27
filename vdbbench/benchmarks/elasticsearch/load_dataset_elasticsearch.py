@@ -21,9 +21,9 @@ class LoadDatasetElasticsearch(Benchmark):
         self,
         dataset: DatasetLoader,
         node_count: int = 3,
-        shard_count: int = 2,
+        shard_count: int = 3,
         replica_count: int = 2,
-        max_vectors: int = 100000,
+        max_vectors: int = -1,
     ):
         self.dataset = dataset
         self.node_count = node_count
@@ -31,28 +31,29 @@ class LoadDatasetElasticsearch(Benchmark):
         self.replica_count = replica_count
         self.max_vectors = max_vectors
 
-    def deploy(self):
+    def deploy(self) -> dict:
         return apply_terraform(
             DatabaseDeployment.ELASTICSEARCH, node_count=self.node_count
         )
 
     def run(self, config: dict) -> dict:
-        data = self.dataset.load().train[: self.max_vectors]
+        data = self.dataset.load().train
+        if self.max_vectors > 0:
+            data = data[: self.max_vectors]
 
-        es = create_elasticsearch_client(config)
+        logger.info("Waiting for the cluster to be ready")
+        es = create_elasticsearch_client(config).options(request_timeout=1000)
         wait_for_elasticsearch_cluster(es)
 
         try:
-            es.indices.delete(
-                index=self.dataset.name, ignore=[400, 404], request_timeout=900
-            )
+            es.indices.delete(index=self.dataset.name, ignore_unavailable=True)
 
             logger.info(f"Creating index {self.dataset.name}")
             es.indices.create(
                 index=self.dataset.name,
                 settings={
                     "number_of_shards": self.shard_count,
-                    "number_of_replicas": self.replica_count,
+                    "number_of_replicas": 0,
                     "refresh_interval": -1,
                 },
                 mappings={
@@ -92,19 +93,43 @@ class LoadDatasetElasticsearch(Benchmark):
                     for i, vec in enumerate(data)
                 ),
                 chunk_size=10000,
-                request_timeout=900,
+                request_timeout=3000,
             )
+
+            if self.replica_count > 0:
+                logger.info("Scaling replicas to the desired count")
+                es.indices.put_settings(
+                    index=self.dataset.name,
+                    body={"index": {"number_of_replicas": self.replica_count}},
+                )
 
             logger.info("Forcing merge index")
-            es.indices.forcemerge(
-                index=self.dataset.name, max_num_segments=1, request_timeout=900
-            )
+            es.indices.forcemerge(index=self.dataset.name, max_num_segments=1)
 
             logger.info("Refreshing index")
-            es.indices.refresh(index=self.dataset.name, request_timeout=900)
+            es.indices.refresh(index=self.dataset.name)
+
+            logger.info("Waiting for the index status to be green")
+            es.cluster.health(wait_for_status="green")
 
             end_time = perf_counter()
             duration = end_time - start_time
+
+            logger.info("Checking index status")
+            index_status = es.indices.get(index=self.dataset.name)
+            assert (
+                int(index_status[self.dataset.name]["settings"]["index"]["number_of_shards"])
+                == self.shard_count
+            ), "Index has wrong number of shards"
+            assert (
+                int(index_status[self.dataset.name]["settings"]["index"][
+                    "number_of_replicas"
+                ])
+                == self.replica_count
+            ), "Index has wrong number of replicas"
+            assert es.count(index=self.dataset.name)["count"] == len(
+                data
+            ), "Index has wrong number of documents"
 
             logger.info("Running a test query")
             res = es.search(
@@ -132,9 +157,7 @@ class LoadDatasetElasticsearch(Benchmark):
             ), "Query returned wrong result"
 
             logger.info("Deleting index")
-            es.indices.delete(
-                index=self.dataset.name, ignore=[400, 404], request_timeout=900
-            )
+            es.indices.delete(index=self.dataset.name)
 
             return {
                 "status": "success",

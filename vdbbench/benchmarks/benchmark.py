@@ -4,6 +4,7 @@ class Benchmark:
 
         Returns:
             A dictionary containing the configuration for the benchmark, typically the terraform output values.
+            Must contain a "runner_instance_ip" key with the IP address string of the runner instance.
         """
         pass
 
