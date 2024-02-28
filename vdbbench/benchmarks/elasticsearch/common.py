@@ -38,7 +38,9 @@ def wait_for_elasticsearch_cluster(
     start_time = time.monotonic()
     while time.monotonic() - start_time < timeout:
         try:
-            es.cluster.health(wait_for_status="green")
+            for node in es.transport.node_pool.all():
+                node.perform_request("GET", "/", headers={"accept": "application/json"})
+            # We were able to perform a request on all nodes, so the cluster is fully ready
             return
         except ConnectionError:
             time.sleep(5)

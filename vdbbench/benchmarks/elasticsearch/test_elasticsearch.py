@@ -1,3 +1,5 @@
+import traceback
+
 from elasticsearch import ConnectionError
 
 from vdbbench.benchmarks.benchmark import Benchmark
@@ -29,6 +31,7 @@ class TestElasticsearch(Benchmark):
         try:
             index_response = es.index(index="test-index", document=doc)
             retrieve_response = es.get(index="test-index", id=index_response["_id"])
+            es.indices.delete(index="test-index", ignore=[400, 404])
 
             if retrieve_response["_source"] == doc:
                 return {
@@ -43,7 +46,12 @@ class TestElasticsearch(Benchmark):
         except ConnectionError as e:
             return {
                 "status": "failure",
-                "detail": f"Elasticsearch connection error: {e!s}",
+                "detail": f"Elasticsearch connection error: {e}",
+                "traceback": f"{traceback.format_exc()}",
             }
         except Exception as e:
-            return {"status": "failure", "detail": f"Test failed with error: {e!s}"}
+            return {
+                "status": "failure",
+                "detail": f"Test failed with error: {e}",
+                "traceback": f"{traceback.format_exc()}",
+            }
