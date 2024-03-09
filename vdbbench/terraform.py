@@ -18,6 +18,7 @@ class DatabaseDeployment(str, enum.Enum):
     """
 
     ELASTICSEARCH = "elasticsearch"
+    NEO4J = "neo4j"
 
 
 def init_terraform(db: DatabaseDeployment):
