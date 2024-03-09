@@ -1,6 +1,6 @@
 class Benchmark:
     def deploy(self) -> dict:
-        """Deploys the the terraform resources for the benchmark.
+        """Deploys the terraform resources for the benchmark.
 
         Returns:
             A dictionary containing the configuration for the benchmark, typically the terraform output values.
