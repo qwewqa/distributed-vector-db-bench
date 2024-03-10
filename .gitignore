@@ -215,3 +215,4 @@ config.json
 gcp_key.json
 id_rsa*
 results/
+.idea
