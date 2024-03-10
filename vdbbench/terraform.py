@@ -18,6 +18,7 @@ class DatabaseDeployment(str, enum.Enum):
     """
 
     ELASTICSEARCH = "elasticsearch"
+    WEAVIATE = "weaviate"
 
 
 def init_terraform(db: DatabaseDeployment):
