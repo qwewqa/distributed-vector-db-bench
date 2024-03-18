@@ -20,14 +20,10 @@ To see all actions
 ```bash
  python -m vdbbench --help
 ```
-Run the code
-```bash
-python -m vdbbench COMMAND [ARGS]...
-```
 
 Examples:
 ```bash
-python -m vdbbench run test-elasticsearch
+python -m vdbbench run elasticsearch-test
 ```
 ```bash
 python -m vdbbench destroy-all
