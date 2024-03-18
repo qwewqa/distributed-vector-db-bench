@@ -16,7 +16,10 @@ Source `setup.sh`
 ```bash
 . setup.sh <google-cloud-project-id>
 ```
-
+To see all actions
+```bash
+ python -m vdbbench --help
+```
 Run the code
 ```bash
 python -m vdbbench COMMAND [ARGS]...
