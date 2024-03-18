@@ -19,6 +19,9 @@ class DatabaseDeployment(str, enum.Enum):
 
     ELASTICSEARCH = "elasticsearch"
 
+    def __str__(self):
+        return self.value
+
 
 def init_terraform(db: DatabaseDeployment):
     """Initializes the Terraform module for the given database deployment if it has not been initialized already.
