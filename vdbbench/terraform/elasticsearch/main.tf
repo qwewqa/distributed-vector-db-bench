@@ -2,7 +2,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "4.51.0"
+      version = "5.20.0"
     }
   }
 }
@@ -47,10 +47,13 @@ resource "google_compute_instance" "db_instances" {
   name         = "elasticsearch-${each.key}"
   machine_type = var.machine_type
   tags         = ["elasticsearch"]
+  allow_stopping_for_update = true
 
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
+      type = "pd-ssd"
+      size = 128
     }
   }
 
@@ -103,6 +106,7 @@ resource "google_compute_instance" "runner_instance" {
   name         = "elasticsearch-runner"
   machine_type = var.machine_type
   tags         = ["elasticsearch"]
+  allow_stopping_for_update = true
 
   boot_disk {
     initialize_params {

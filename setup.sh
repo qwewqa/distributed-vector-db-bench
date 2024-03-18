@@ -26,7 +26,7 @@ private_key_path="$(pwd)/id_rsa"
 public_key_path="$(pwd)/id_rsa.pub"
 
 if [[ -f "$private_key_path" && -f "$public_key_path" ]]; then
-    echo "SSH key pair already exists in the current directory."
+    echo "SSH key pair already exists in the current directory, skipping creation."
 else
     # Generate a new SSH key pair
     echo "Creating a new SSH key pair..."

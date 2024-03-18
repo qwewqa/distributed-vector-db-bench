@@ -48,6 +48,7 @@ class LoadDatasetElasticsearch(Benchmark):
         try:
             es.indices.delete(index=self.dataset.name, ignore_unavailable=True)
 
+            start_time = perf_counter()
             logger.info(f"Creating index {self.dataset.name}")
             es.indices.create(
                 index=self.dataset.name,
@@ -78,8 +79,6 @@ class LoadDatasetElasticsearch(Benchmark):
                 },
             )
 
-            start_time = perf_counter()
-
             logger.info(f"Loading dataset {self.dataset.name} ({len(data)} vectors)")
             bulk(
                 es,
@@ -92,8 +91,7 @@ class LoadDatasetElasticsearch(Benchmark):
                     }
                     for i, vec in enumerate(data)
                 ),
-                chunk_size=10000,
-                request_timeout=3000,
+                chunk_size=1000,
             )
 
             if self.replica_count > 0:
@@ -118,13 +116,19 @@ class LoadDatasetElasticsearch(Benchmark):
             logger.info("Checking index status")
             index_status = es.indices.get(index=self.dataset.name)
             assert (
-                int(index_status[self.dataset.name]["settings"]["index"]["number_of_shards"])
+                int(
+                    index_status[self.dataset.name]["settings"]["index"][
+                        "number_of_shards"
+                    ]
+                )
                 == self.shard_count
             ), "Index has wrong number of shards"
             assert (
-                int(index_status[self.dataset.name]["settings"]["index"][
-                    "number_of_replicas"
-                ])
+                int(
+                    index_status[self.dataset.name]["settings"]["index"][
+                        "number_of_replicas"
+                    ]
+                )
                 == self.replica_count
             ), "Index has wrong number of replicas"
             assert es.count(index=self.dataset.name)["count"] == len(
