@@ -5,7 +5,7 @@ pc = Pinecone(api_key='YOUR_API_KEY')
 pc.create_index(
     name="quickstart",
     dimension=8,
-    metric="euclidean",
+    metric="cosine",
     # change later, serverless only available on AWS 
     # trying to start with some boilerplate code rn git commit -am ""
     spec=ServerlessSpec(
