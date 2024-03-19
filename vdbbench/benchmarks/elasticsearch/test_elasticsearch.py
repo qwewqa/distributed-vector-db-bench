@@ -19,8 +19,8 @@ class TestElasticsearch(Benchmark):
     def deploy(self):
         return apply_terraform(DatabaseDeployment.ELASTICSEARCH)
 
-    def run(self, config: dict) -> dict:
-        es = create_elasticsearch_client(config)
+    def run(self, deploy_output: dict) -> dict:
+        es = create_elasticsearch_client(deploy_output)
         wait_for_elasticsearch_cluster(es)
 
         doc = {
