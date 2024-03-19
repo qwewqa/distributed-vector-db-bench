@@ -74,7 +74,7 @@ class QueryBenchmark(Benchmark):
         self.data_config = data or {}
         self.group_config = group or {}
         self.query_config = query or {}
-        self.logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
+        self.logger = logging.getLogger(type(self).__module__)
 
     @abstractmethod
     def run_deploy(self, **kwargs) -> dict:
