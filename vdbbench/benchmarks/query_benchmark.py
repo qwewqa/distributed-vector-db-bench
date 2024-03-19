@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import itertools
+import json
 import logging
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -20,6 +21,46 @@ class QueryBenchmark(Benchmark):
 
     This class is designed to be subclassed to implement a specific database benchmark
     by implementing the abstract methods.
+
+    Configuration is in the following format: {
+        "deploy": {
+            // run_deploy arguments
+        },
+        "data": {
+            "dataset": <dataset name>,
+            // load_data arguments
+        },
+        "group": {
+            // prepare_group arguments
+        },
+        "query": {
+            "rounds": <number of rounds to run for each query configuration>,
+            "k": <number of nearest neighbors to return for each query>,
+            "batch_size": <number of queries to run in each batch>,
+            // query and prepare_query arguments
+        },
+    }
+    "data", "group", and "query" support starred keys, allowing all combinations of the values to be tested.
+    For example, the query configuration {"*batch_size": [100, 200], "*k": [10, 20]} will result in the following configurations:
+    {"batch_size": 100, "k": 10}, {"batch_size": 100, "k": 20}, {"batch_size": 200, "k": 10}, {"batch_size": 200, "k": 20}.
+
+    load_data is called once for each data configuration.
+    For each data configuration, prepare_group is called once for each group configuration.
+    For each group configuration, prepare_query and query are called once for each round of queries for each query configuration.
+    For example given data configurations d1 and d2, group configurations g1 and g2, and query configurations q1 and q2, the following calls are made:
+        prepare_group(g1)
+            repeat for q1["rounds"]: prepare_query(q1) query(q1)
+            repeat for q2["rounds"]: prepare_query(q2) query(q2)
+        prepare_group(g2)
+            repeat for q1["rounds"]: prepare_query(q1) query(q1)
+            repeat for q2["rounds"]: prepare_query(q2) query(q2)
+    load_data(d2)
+        prepare_group(g1)
+            repeat for q1["rounds"]: prepare_query(q1) query(q1)
+            repeat for q2["rounds"]: prepare_query(q2) query(q2)
+        prepare_group(g2)
+            repeat for q1["rounds"]: prepare_query(q1) query(q1)
+            repeat for q2["rounds"]: prepare_query(q2) query(q2)
     """
 
     def __init__(
@@ -87,9 +128,15 @@ class QueryBenchmark(Benchmark):
 
     def deploy(self) -> dict:
         self.validate_config()
-        return self._call_with_used_args(self.run_deploy, **self.deploy_config)
+        return self._call_with_config(self.run_deploy, self.deploy_config)
 
-    def run(self, config: dict) -> dict:
+    def run(self, deploy_output: dict) -> dict:
+        self._backfill_config(self.deploy_config, self.run_deploy)
+        self._backfill_config(self.data_config, self.load_data)
+        self._backfill_config(self.group_config, self.prepare_group)
+        self._backfill_config(self.query_config, self.prepare_query)
+        self._backfill_config(self.query_config, self.query)
+
         data_configs = self._produce_combinations(self.data_config)
         group_configs = self._produce_combinations(self.group_config)
         query_configs = self._produce_combinations(self.query_config)
@@ -100,23 +147,20 @@ class QueryBenchmark(Benchmark):
             f"{len(data_configs) * len(group_configs) * len(query_configs)} total configuration(s)"
         )
 
-        self.init(config)
+        self.init(deploy_output)
         results = []
         for data_config in data_configs:
             self.logger.info(f"Running data configuration: {data_config}")
             dataset_name = data_config["dataset"]
             dataset = self._load_dataset(dataset_name)
-            self._call_with_used_args(
-                self.load_data, **(data_config | {"dataset": dataset})
-            )
+            self._call_with_config(self.load_data, (data_config | {"dataset": dataset}))
             group_results = []
             for group_config in group_configs:
                 self.logger.info(f"Running group configuration: {group_config}")
-                self._call_with_used_args(self.prepare_group, **group_config)
+                self._call_with_config(self.prepare_group, group_config)
                 query_results = []
                 for query_config in query_configs:
                     self.logger.info(f"Running query configuration: {query_config}")
-                    self._call_with_used_args(self.prepare_query, **query_config)
                     query_result = self._do_queries(dataset, query_config)
                     query_results.append(query_result)
                     self.logger.info(f"Query result: {query_result}")
@@ -133,6 +177,24 @@ class QueryBenchmark(Benchmark):
         return DATASETS[dataset]()
 
     def _do_queries(self, dataset: Dataset, query_config: dict) -> QueryResult:
+        rounds = query_config.setdefault("rounds", 1)
+        if rounds < 1:
+            raise ValueError("Expected at least 1 round")
+        results = []
+        for i in range(rounds):
+            self.logger.info(f"Running query round {i + 1}/{rounds}")
+            results.append(self._do_query_round(dataset, query_config))
+        latency = np.concatenate([r.latency for r in results])
+        recall = np.concatenate([r.recall for r in results])
+        relative_error = np.concatenate([r.relative_error for r in results])
+        return QueryResult(
+            query_config=query_config,
+            latency=Summary.from_array(latency, worst="max"),
+            recall=Summary.from_array(recall, worst="min"),
+            relative_error=Summary.from_array(relative_error, worst="max"),
+        )
+
+    def _do_query_round(self, dataset: Dataset, query_config: dict) -> QueryRoundResult:
         epsilon = 1e-3
         batch_size = query_config.setdefault("batch_size", 100)
         k = query_config.setdefault(
@@ -143,23 +205,23 @@ class QueryBenchmark(Benchmark):
         dists = dataset.distances
         n_test = test.shape[0]
         n_batches = n_test // batch_size
+
+        self.logger.info("Preparing for queries")
+        self._call_with_config(self.prepare_query, query_config)
+
         self.logger.info(
             f"Running {n_test} queries in {n_batches} batches of {batch_size}"
         )
-
-        latencies = np.zeros(n_batches)
-        recalls = np.zeros(n_test)
-        relative_errors = np.zeros(n_test)
-
+        latency = np.zeros(n_batches)
+        recall = np.zeros(n_test)
+        relative_error = np.zeros(n_test)
         for batch_i in range(n_batches):
             start = batch_i * batch_size
             end = (batch_i + 1) * batch_size
             queries = test[start:end]
             start_time = perf_counter()
-            response = self._call_with_used_args(
-                self.query, queries=queries, **query_config
-            )
-            latencies[batch_i] = perf_counter() - start_time
+            response = self._call_with_config(self.query, query_config, queries=queries)
+            latency[batch_i] = perf_counter() - start_time
             assert (
                 len(response) == queries.shape[0]
             ), f"Expected {queries.shape[0]} responses, got {len(response)}"
@@ -176,16 +238,15 @@ class QueryBenchmark(Benchmark):
                         for result_vector in result_vectors
                     ]
                 )
-                recalls[i] = self._calc_recall(k, true_dists, result_dists, epsilon)
-                relative_errors[i] = self._calc_relative_error(
+                recall[i] = self._calc_recall(k, true_dists, result_dists, epsilon)
+                relative_error[i] = self._calc_relative_error(
                     k, true_dists, result_dists, epsilon
                 )
 
-        return QueryResult(
-            query_config=query_config,
-            latency=Summary.from_array(latencies, worst="max"),
-            recall=Summary.from_array(recalls, worst="min"),
-            relative_error=Summary.from_array(relative_errors, worst="max"),
+        return QueryRoundResult(
+            latency=latency,
+            recall=recall,
+            relative_error=relative_error,
         )
 
     def _calc_recall(
@@ -242,6 +303,8 @@ class QueryBenchmark(Benchmark):
         ]
 
     def validate_config(self):
+        if any(k.startswith("*") for k in self.deploy_config.keys()):
+            raise ValueError("Starred keys are not allowed in deploy configuration")
         self._validate_config_has_required_keys(
             self.deploy_config, self._get_required_arg_names(self.run_deploy), "deploy"
         )
@@ -274,11 +337,44 @@ class QueryBenchmark(Benchmark):
         )
         self._validate_all_config_values_used(
             self.query_config,
-            {"batch_size"}
+            {"batch_size", "rounds"}
             | self._get_arg_names(self.query)
             | self._get_arg_names(self.prepare_query),
             "query",
         )
+
+    @classmethod
+    def _call_with_config(cls, f, config: dict, **kwargs):
+        cls._backfill_config(config, f)
+        return f(
+            **{
+                k: v
+                for k, v in config.items()
+                if k in cls._get_arg_names(f) and k not in kwargs
+            },
+            **kwargs,
+        )
+
+    @classmethod
+    def _backfill_config(cls, config: dict, f):
+        for k, v in cls._get_default_args(f).items():
+            if (
+                k not in config
+                and f"*{k}" not in config
+                and cls._is_json_serializable(v)
+            ):
+                config[k] = v
+        return config
+
+    @staticmethod
+    def _is_json_serializable(value) -> bool:
+        try:
+            if dataclasses.is_dataclass(value):
+                value = dataclasses.asdict(value)
+            json.dumps(value)
+            return True
+        except TypeError:
+            return False
 
     @staticmethod
     def _get_default_args(f) -> dict:
@@ -299,12 +395,6 @@ class QueryBenchmark(Benchmark):
             for k, v in inspect.signature(f).parameters.items()
             if v.default is inspect.Parameter.empty
         }
-
-    @staticmethod
-    def _call_with_used_args(f, **kwargs):
-        return f(
-            **{k: v for k, v in kwargs.items() if k in QueryBenchmark._get_arg_names(f)}
-        )
 
     @staticmethod
     def _validate_config_has_required_keys(
@@ -349,6 +439,13 @@ class QueryResult:
     latency: Summary
     recall: Summary
     relative_error: Summary
+
+
+@dataclass
+class QueryRoundResult:
+    latency: np.ndarray
+    recall: np.ndarray
+    relative_error: np.ndarray
 
 
 @dataclass
