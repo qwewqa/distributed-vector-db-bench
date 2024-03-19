@@ -189,6 +189,8 @@ resource "google_compute_instance" "pinecone_instance" {
     wget https://dl.pinecone.io/cli/install.sh
     chmod +x install.sh
     ./install.sh
+    # Configure Pinecone (replace with actual configuration)
+    pinecone setup --api-key=<YOUR_API_KEY> --api-secret=<YOUR_API_SECRET> --project-id=<YOUR_PROJECT_ID>
     systemctl start pinecone
     systemctl enable pinecone
   SCRIPT
