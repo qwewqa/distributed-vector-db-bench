@@ -10,7 +10,7 @@ from vdbbench.benchmarks.elasticsearch.common import (
     create_elasticsearch_client,
     wait_for_elasticsearch_cluster,
 )
-from vdbbench.datasets import DatasetLoader
+from vdbbench.datasets import DATASETS
 from vdbbench.terraform import DatabaseDeployment, apply_terraform
 
 logger = logging.getLogger(__name__)
@@ -19,13 +19,14 @@ logger = logging.getLogger(__name__)
 class LoadDatasetElasticsearch(Benchmark):
     def __init__(
         self,
-        dataset: DatasetLoader,
+        dataset: str,
         node_count: int = 3,
         shard_count: int = 3,
         replica_count: int = 2,
         max_vectors: int = -1,
     ):
-        self.dataset = dataset
+        self.dataset_name = dataset
+        self.dataset = DATASETS[dataset]
         self.node_count = node_count
         self.shard_count = shard_count
         self.replica_count = replica_count
@@ -36,21 +37,22 @@ class LoadDatasetElasticsearch(Benchmark):
             DatabaseDeployment.ELASTICSEARCH, node_count=self.node_count
         )
 
-    def run(self, config: dict) -> dict:
-        data = self.dataset.load().train
+    def run(self, deploy_output: dict) -> dict:
+        data = self.dataset().train
         if self.max_vectors > 0:
             data = data[: self.max_vectors]
 
         logger.info("Waiting for the cluster to be ready")
-        es = create_elasticsearch_client(config).options(request_timeout=1000)
+        es = create_elasticsearch_client(deploy_output).options(request_timeout=1000)
         wait_for_elasticsearch_cluster(es)
 
         try:
-            es.indices.delete(index=self.dataset.name, ignore_unavailable=True)
+            es.indices.delete(index=self.dataset_name, ignore_unavailable=True)
 
-            logger.info(f"Creating index {self.dataset.name}")
+            start_time = perf_counter()
+            logger.info(f"Creating index {self.dataset_name}")
             es.indices.create(
-                index=self.dataset.name,
+                index=self.dataset_name,
                 settings={
                     "number_of_shards": self.shard_count,
                     "number_of_replicas": 0,
@@ -65,7 +67,7 @@ class LoadDatasetElasticsearch(Benchmark):
                         "vec": {
                             "type": "dense_vector",
                             "element_type": "float",
-                            "dims": self.dataset.dims,
+                            "dims": data.shape[1],
                             "index": True,
                             "similarity": "l2_norm",
                             "index_options": {
@@ -78,36 +80,33 @@ class LoadDatasetElasticsearch(Benchmark):
                 },
             )
 
-            start_time = perf_counter()
-
-            logger.info(f"Loading dataset {self.dataset.name} ({len(data)} vectors)")
+            logger.info(f"Loading dataset {self.dataset_name} ({len(data)} vectors)")
             bulk(
                 es,
                 (
                     {
                         "_op_type": "index",
-                        "_index": self.dataset.name,
+                        "_index": self.dataset_name,
                         "id": str(i),
                         "vec": vec.tolist(),
                     }
                     for i, vec in enumerate(data)
                 ),
-                chunk_size=10000,
-                request_timeout=3000,
+                chunk_size=1000,
             )
 
             if self.replica_count > 0:
                 logger.info("Scaling replicas to the desired count")
                 es.indices.put_settings(
-                    index=self.dataset.name,
+                    index=self.dataset_name,
                     body={"index": {"number_of_replicas": self.replica_count}},
                 )
 
             logger.info("Forcing merge index")
-            es.indices.forcemerge(index=self.dataset.name, max_num_segments=1)
+            es.indices.forcemerge(index=self.dataset_name, max_num_segments=1)
 
             logger.info("Refreshing index")
-            es.indices.refresh(index=self.dataset.name)
+            es.indices.refresh(index=self.dataset_name)
 
             logger.info("Waiting for the index status to be green")
             es.cluster.health(wait_for_status="green")
@@ -116,24 +115,30 @@ class LoadDatasetElasticsearch(Benchmark):
             duration = end_time - start_time
 
             logger.info("Checking index status")
-            index_status = es.indices.get(index=self.dataset.name)
+            index_status = es.indices.get(index=self.dataset_name)
             assert (
-                int(index_status[self.dataset.name]["settings"]["index"]["number_of_shards"])
+                int(
+                    index_status[self.dataset_name]["settings"]["index"][
+                        "number_of_shards"
+                    ]
+                )
                 == self.shard_count
             ), "Index has wrong number of shards"
             assert (
-                int(index_status[self.dataset.name]["settings"]["index"][
-                    "number_of_replicas"
-                ])
+                int(
+                    index_status[self.dataset_name]["settings"]["index"][
+                        "number_of_replicas"
+                    ]
+                )
                 == self.replica_count
             ), "Index has wrong number of replicas"
-            assert es.count(index=self.dataset.name)["count"] == len(
+            assert es.count(index=self.dataset_name)["count"] == len(
                 data
             ), "Index has wrong number of documents"
 
             logger.info("Running a test query")
             res = es.search(
-                index=self.dataset.name,
+                index=self.dataset_name,
                 body={
                     "knn": {
                         "field": "vec",
@@ -157,7 +162,7 @@ class LoadDatasetElasticsearch(Benchmark):
             ), "Query returned wrong result"
 
             logger.info("Deleting index")
-            es.indices.delete(index=self.dataset.name)
+            es.indices.delete(index=self.dataset_name)
 
             return {
                 "status": "success",
