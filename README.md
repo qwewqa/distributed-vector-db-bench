@@ -24,11 +24,11 @@ To see all actions
 Examples:
 ```bash
 # Test elasticsearch
-python -m vdbbench run elasticsearch-test
+python -m vdbbench run --benchmark elasticsearch-test
 ```
 ```bash
 # Benchmark elasticsearch query performance on fashion-mnist
-python -m vdbbench run elasticsearch-query dataset=\"fashion-mnist\"
+python -m vdbbench run --benchmark elasticsearch-query dataset=\"fashion-mnist\"
 ```
 ```bash
 # Benchmark elasticsearch query with the elasticsearch_query_mnist.json config

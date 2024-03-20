@@ -27,9 +27,10 @@ def destroy_all():
     help="Run a benchmark.",
 )
 def run(
-    name: Annotated[
+    benchmark_name: Annotated[
         Optional[str],
-        typer.Argument(
+        typer.Option(
+            "--benchmark",
             help="The name of the benchmark to run.",
         ),
     ] = None,
@@ -51,17 +52,17 @@ def run(
         ),
     ] = None,
 ):
-    if name is None and config_path is None:
+    if benchmark_name is None and config_path is None:
         logger.error("No benchmark specified.")
         return
     if config_path is not None:
         config = json.loads(config_path.read_text())
-        if name is not None:
+        if benchmark_name is not None:
             logger.error("Both name and config file specified.")
             return
-        name = config["benchmark"]
+        benchmark_name = config["benchmark"]
     else:
-        config = {"benchmark": name, "config": {}}
+        config = {"benchmark": benchmark_name, "config": {}}
     if args:
         for arg in args:
             key, value = arg.split("=")
@@ -73,18 +74,18 @@ def run(
                 for part in key_parts[:-1]:
                     current = current.setdefault(part, {})
                 current[key_parts[-1]] = json.loads(value)
-    logger.info(f"Running benchmark for {name}")
+    logger.info(f"Running benchmark for {benchmark_name}")
     if not os.environ.get("TF_VAR_project"):
         logger.error("Environment variables are not set. Run `. setup.sh` to set them.")
         return
-    if name in benchmarks.BENCHMARKS:
-        benchmark = benchmarks.BENCHMARKS[name](**config["config"])
+    if benchmark_name in benchmarks.BENCHMARKS:
+        benchmark = benchmarks.BENCHMARKS[benchmark_name](**config["config"])
         deploy_result = benchmark.deploy()
-        results = retry_execute_runner(name, config, deploy_result)
+        results = retry_execute_runner(benchmark_name, config, deploy_result)
         logger.info(results)
-        save_results(name, results)
+        save_results(benchmark_name, results)
     else:
-        logger.error(f"Unknown benchmark: {name}")
+        logger.error(f"Unknown benchmark: {benchmark_name}")
 
 
 def save_results(name: str, results: dict):
@@ -103,6 +104,33 @@ def list_benchmarks():
     print("Available benchmarks:")
     for name in benchmarks.BENCHMARKS:
         print(f"  {name}")
+
+
+@app.command(
+    name="plot-recall-latency",
+    help="Plot recall-latency tradeoff for a query result.",
+)
+def plot_query_results(
+    data: Annotated[
+        Path,
+        typer.Argument(
+            help="The path to the JSON file containing the query results.",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ],
+):
+    data = json.loads(data.read_text())
+    try:
+        from vdbbench.plot.query_plot import plot_recall_latency
+    except ImportError:
+        logger.error(
+            "Plotting is not available, ensure that the required packages are installed."
+        )
+        return
+    plot_recall_latency(data)
 
 
 @app.command(hidden=True)

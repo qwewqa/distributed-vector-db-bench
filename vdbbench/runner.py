@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def package_vdbbench():
-    """Creates a tarball of all Python files and the requirements.txt file.
+    """Creates a tarball of all Python files and the requirements-runner.txt file.
 
     Returns:
         A BytesIO object with the tarball contents.
@@ -23,7 +23,10 @@ def package_vdbbench():
     buff = io.BytesIO()
     with tarfile.open(mode="w:gz", fileobj=buff) as tar_file:
         for file_path in Path(PROJECT_DIR).rglob("*"):
-            if file_path.suffix in [".py"] or file_path.name == "requirements.txt":
+            if (
+                file_path.suffix in [".py"]
+                or file_path.name == "requirements-runner.txt"
+            ):
                 tar_file.add(file_path, arcname=file_path.relative_to(PROJECT_DIR))
     buff.seek(0)
     return buff
@@ -108,7 +111,7 @@ def execute_runner(name: str, config: dict, deploy_outputs: dict) -> dict:
         conn.run("python3 -m venv /tmp/vdbbench/venv")
         conn.run(
             f". /tmp/vdbbench/venv/bin/activate && \
-            pip install -r /tmp/vdbbench/requirements.txt && \
+            pip install -r /tmp/vdbbench/requirements-runner.txt && \
             cd /tmp/vdbbench && \
             python -m vdbbench run-bench {name} {config_json_path}",
         )
