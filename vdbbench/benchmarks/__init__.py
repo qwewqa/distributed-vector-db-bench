@@ -6,9 +6,11 @@ from vdbbench.benchmarks.elasticsearch.load_dataset_elasticsearch import (
 )
 from vdbbench.benchmarks.elasticsearch.query_elasticsearch import QueryElasticsearch
 from vdbbench.benchmarks.elasticsearch.test_elasticsearch import TestElasticsearch
+from vdbbench.benchmarks.test.test_query import TestQuery
 
 BENCHMARKS: dict[str, Callable[..., Benchmark]] = {
     "elasticsearch-test": TestElasticsearch,
     "elasticsearch-load": LoadDatasetElasticsearch,
     "elasticsearch-query": QueryElasticsearch,
+    "test-query": TestQuery,
 }

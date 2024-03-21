@@ -53,7 +53,7 @@ def run(
     ] = None,
 ):
     if benchmark_name is None and config_path is None:
-        logger.error("No benchmark specified.")
+        logger.error("No benchmark specified, use --benchmark or --config.")
         return
     if config_path is not None:
         config = json.loads(config_path.read_text())
