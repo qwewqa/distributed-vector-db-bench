@@ -25,7 +25,7 @@ class QueryBenchmark(Benchmark):
     Configuration is in the following format: {
         "deploy": {
             // run_deploy arguments
-        },
+            // init arguments
         "data": {
             "dataset": <dataset name>,
             // load_data arguments
@@ -81,7 +81,7 @@ class QueryBenchmark(Benchmark):
         """Deploys the the resources for the benchmark."""
 
     @abstractmethod
-    def init(self, deploy_output: dict):
+    def init(self, deploy_output: dict, **kwargs):
         """Initializes the benchmark.
 
         This method is called once before the benchmark is run.
@@ -93,7 +93,7 @@ class QueryBenchmark(Benchmark):
     def load_data(self, dataset: Dataset, **kwargs):
         """Loads the data into the database.
 
-        This method should clear the database and load the train data from the given numpy array.
+        This method should clear the database and load the train data from the given dataset.
         """
 
     @abstractmethod
@@ -131,6 +131,7 @@ class QueryBenchmark(Benchmark):
         return self._call_with_config(self.run_deploy, self.deploy_config)
 
     def run(self, deploy_output: dict) -> dict:
+        self._backfill_config(self.deploy_config, self.init)
         self._backfill_config(self.deploy_config, self.run_deploy)
         self._backfill_config(self.data_config, self.load_data)
         self._backfill_config(self.group_config, self.prepare_group)
@@ -147,7 +148,9 @@ class QueryBenchmark(Benchmark):
             f"{len(data_configs) * len(group_configs) * len(query_configs)} total configuration(s)"
         )
 
-        self.init(deploy_output)
+        self._call_with_config(
+            self.init, self.deploy_config, deploy_output=deploy_output
+        )
         results = []
         for data_config in data_configs:
             self.logger.info(f"Running data configuration: {data_config}")
@@ -306,10 +309,16 @@ class QueryBenchmark(Benchmark):
         if any(k.startswith("*") for k in self.deploy_config.keys()):
             raise ValueError("Starred keys are not allowed in deploy configuration")
         self._validate_config_has_required_keys(
-            self.deploy_config, self._get_required_arg_names(self.run_deploy), "deploy"
+            self.deploy_config,
+            self._get_required_arg_names(self.run_deploy)
+            | self._get_required_arg_names(self.init) - {"deploy_output"},
+            "deploy",
         )
         self._validate_all_config_values_used(
-            self.deploy_config, self._get_arg_names(self.run_deploy), "deploy"
+            self.deploy_config,
+            self._get_arg_names(self.run_deploy)
+            | self._get_required_arg_names(self.init),
+            "deploy",
         )
 
         self._validate_config_has_required_keys(
