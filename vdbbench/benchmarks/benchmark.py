@@ -1,4 +1,8 @@
-class Benchmark:
+from abc import ABC, abstractmethod
+
+
+class Benchmark(ABC):
+    @abstractmethod
     def deploy(self) -> dict:
         """Deploys the terraform resources for the benchmark.
 
@@ -8,13 +12,14 @@ class Benchmark:
         """
         pass
 
-    def run(self, config: dict) -> dict:
+    @abstractmethod
+    def run(self, deploy_output: dict) -> dict:
         """Runs the benchmark.
 
         This runs on the runner instance on the deployed module.
 
         Args:
-            config: The configuration for the benchmark from the deploy method.
+            deploy_output: The output dictionary returned by the deploy method.
 
         Returns:
             A dictionary containing the results of the benchmark.

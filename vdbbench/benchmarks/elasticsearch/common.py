@@ -4,12 +4,12 @@ from elasticsearch import ConnectionError, Elasticsearch
 
 
 def create_elasticsearch_client(
-    config: dict,
+    deploy_output: dict,
 ) -> Elasticsearch:
     """Creates an Elasticsearch client from the configuration.
 
     Args:
-        config: The output from the Terraform module for the Elasticsearch deployment.
+        deploy_output: The output from the Terraform module for the Elasticsearch deployment.
 
     Returns:
         An Elasticsearch client.
@@ -17,7 +17,7 @@ def create_elasticsearch_client(
     return Elasticsearch(
         hosts=[
             {"host": host, "port": 9200, "scheme": "http"}
-            for host in config["elasticsearch_instance_names"]
+            for host in deploy_output["elasticsearch_instance_names"]
         ]
     )
 

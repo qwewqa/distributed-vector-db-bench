@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def package_vdbbench():
-    """Creates a tarball of all Python files and the requirements.txt file.
+    """Creates a tarball of all Python files and the requirements-runner.txt file.
 
     Returns:
         A BytesIO object with the tarball contents.
@@ -23,7 +23,10 @@ def package_vdbbench():
     buff = io.BytesIO()
     with tarfile.open(mode="w:gz", fileobj=buff) as tar_file:
         for file_path in Path(PROJECT_DIR).rglob("*"):
-            if file_path.suffix in [".py"] or file_path.name == "requirements.txt":
+            if (
+                file_path.suffix in [".py"]
+                or file_path.name == "requirements-runner.txt"
+            ):
                 tar_file.add(file_path, arcname=file_path.relative_to(PROJECT_DIR))
     buff.seek(0)
     return buff
@@ -32,6 +35,7 @@ def package_vdbbench():
 def retry_execute_runner(
     name: str,
     config: dict,
+    deploy_outputs: dict,
     timeout: int = 300,
     interval: int = 5,
 ) -> dict:
@@ -39,7 +43,8 @@ def retry_execute_runner(
 
     Args:
         name: The name of the benchmark to run.
-        config: The configuration dictionary returned by the deploy method of the benchmark.
+        config: The configuration for the benchmark.
+        deploy_outputs: The output dictionary returned by the deploy method of the benchmark.
         timeout: The maximum time to wait for the runner to become available.
         interval: The time to wait between retries.
 
@@ -49,18 +54,19 @@ def retry_execute_runner(
     start_time = time.monotonic()
     while time.monotonic() - start_time < timeout:
         try:
-            return execute_runner(name, config)
+            return execute_runner(name, config, deploy_outputs)
         except paramiko.ssh_exception.NoValidConnectionsError:
             time.sleep(interval)
     raise TimeoutError("Runner did not become available within the timeout.")
 
 
-def execute_runner(name: str, config: dict) -> dict:
+def execute_runner(name: str, config: dict, deploy_outputs: dict) -> dict:
     """Executes the benchmark with the given name on the runner instance.
 
     Args:
         name: The name of the benchmark to run.
-        config: The configuration dictionary returned by the deploy method of the benchmark.
+        config: The configuration for the benchmark.
+        deploy_outputs: The output dictionary returned by the deploy method of the benchmark.
 
     Returns:
         The result of the benchmark execution.
@@ -69,7 +75,7 @@ def execute_runner(name: str, config: dict) -> dict:
     if not private_key_path:
         raise ValueError("PRIVATE_KEY_PATH environment variable must be set")
 
-    host_ip = config["runner_instance_ip"]
+    host_ip = deploy_outputs["runner_instance_ip"]
     user = "vdbbench"
 
     conn = Connection(
@@ -91,7 +97,9 @@ def execute_runner(name: str, config: dict) -> dict:
               tar -xzf {remote_tar_path} -C /tmp/vdbbench",
         )
 
-        config_json = json.dumps(config)
+        config_json = json.dumps(
+            {"deploy_outputs": deploy_outputs, "config": config["config"]}
+        )
         config_json_path = "/tmp/vdbbench/config.json"
         conn.put(io.BytesIO(config_json.encode()), config_json_path)
 
@@ -103,7 +111,7 @@ def execute_runner(name: str, config: dict) -> dict:
         conn.run("python3 -m venv /tmp/vdbbench/venv")
         conn.run(
             f". /tmp/vdbbench/venv/bin/activate && \
-            pip install -r /tmp/vdbbench/requirements.txt && \
+            pip install -r /tmp/vdbbench/requirements-runner.txt && \
             cd /tmp/vdbbench && \
             python -m vdbbench run-bench {name} {config_json_path}",
         )

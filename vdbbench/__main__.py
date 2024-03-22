@@ -4,7 +4,7 @@ import os
 import time
 import traceback
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Optional
 
 import typer
 
@@ -27,25 +27,65 @@ def destroy_all():
     help="Run a benchmark.",
 )
 def run(
-    name: Annotated[
-        str,
-        typer.Argument(
+    benchmark_name: Annotated[
+        Optional[str],
+        typer.Option(
+            "--benchmark",
             help="The name of the benchmark to run.",
         ),
-    ],
+    ] = None,
+    config_path: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--config",
+            help="The path to the config file for the benchmark.",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ] = None,
+    args: Annotated[
+        Optional[list[str]],
+        typer.Argument(
+            help="Additional arguments to pass to the benchmark, in the form `key=value`. The key can be a nested key, separated by dots, and the value will be parsed as JSON.",
+        ),
+    ] = None,
 ):
-    logger.info(f"Running benchmark for {name}")
+    if benchmark_name is None and config_path is None:
+        logger.error("No benchmark specified, use --benchmark or --config.")
+        return
+    if config_path is not None:
+        config = json.loads(config_path.read_text())
+        if benchmark_name is not None:
+            logger.error("Both name and config file specified.")
+            return
+        benchmark_name = config["benchmark"]
+    else:
+        config = {"benchmark": benchmark_name, "config": {}}
+    if args:
+        for arg in args:
+            key, value = arg.split("=")
+            if key == "":
+                config["config"] = json.loads(value)
+            else:
+                key_parts = key.split(".")
+                current = config["config"]
+                for part in key_parts[:-1]:
+                    current = current.setdefault(part, {})
+                current[key_parts[-1]] = json.loads(value)
+    logger.info(f"Running benchmark for {benchmark_name}")
     if not os.environ.get("TF_VAR_project"):
         logger.error("Environment variables are not set. Run `. setup.sh` to set them.")
         return
-    if name in benchmarks.BENCHMARKS:
-        benchmark = benchmarks.BENCHMARKS[name]
-        config = benchmark.deploy()
-        results = retry_execute_runner(name, config)
+    if benchmark_name in benchmarks.BENCHMARKS:
+        benchmark = benchmarks.BENCHMARKS[benchmark_name](**config["config"])
+        deploy_result = benchmark.deploy()
+        results = retry_execute_runner(benchmark_name, config, deploy_result)
         logger.info(results)
-        save_results(name, results)
+        save_results(benchmark_name, results)
     else:
-        logger.error(f"Unknown benchmark: {name}")
+        logger.error(f"Unknown benchmark: {benchmark_name}")
 
 
 def save_results(name: str, results: dict):
@@ -66,13 +106,40 @@ def list_benchmarks():
         print(f"  {name}")
 
 
-@app.command(hidden=True)
-def run_bench(name: str, config: Path):
-    logger.info(f"Running benchmark for {name} with config {config}")
-    config_data = json.loads(config.read_text())
-    benchmark = benchmarks.BENCHMARKS[name]
+@app.command(
+    name="plot-recall-latency",
+    help="Plot recall-latency tradeoff for a query result.",
+)
+def plot_query_results(
+    data: Annotated[
+        Path,
+        typer.Argument(
+            help="The path to the JSON file containing the query results.",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ],
+):
+    data = json.loads(data.read_text())
     try:
-        result = benchmark.run(config_data)
+        from vdbbench.plot.query_plot import plot_recall_latency
+    except ImportError:
+        logger.error(
+            "Plotting is not available, ensure that the required packages are installed."
+        )
+        return
+    plot_recall_latency(data)
+
+
+@app.command(hidden=True)
+def run_bench(name: str, config_path: Path):
+    logger.info(f"Running benchmark for {name} with config {config_path}")
+    config = json.loads(config_path.read_text())
+    benchmark = benchmarks.BENCHMARKS[name](**config["config"])
+    try:
+        result = benchmark.run(config["deploy_outputs"])
     except Exception as e:
         result = {
             "status": "failure",
