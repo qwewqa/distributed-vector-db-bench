@@ -48,6 +48,7 @@ class QueryBenchmark(Benchmark):
     For each data configuration, prepare_group is called once for each group configuration.
     For each group configuration, prepare_query and query are called once for each round of queries for each query configuration.
     For example given data configurations d1 and d2, group configurations g1 and g2, and query configurations q1 and q2, the following calls are made:
+    load_data(d1)
         prepare_group(g1)
             repeat for q1["rounds"]: prepare_query(q1) query(q1)
             repeat for q2["rounds"]: prepare_query(q2) query(q2)
