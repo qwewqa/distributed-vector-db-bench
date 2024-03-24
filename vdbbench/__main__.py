@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+import yaml
 
 from vdbbench import benchmarks
 from vdbbench.runner import retry_execute_runner
@@ -48,7 +49,7 @@ def run(
     args: Annotated[
         Optional[list[str]],
         typer.Argument(
-            help="Additional arguments to pass to the benchmark, in the form `key=value`. The key can be a nested key, separated by dots, and the value will be parsed as JSON.",
+            help="Additional arguments to pass to the benchmark, in the form `key=value`. The key can be a nested key, separated by dots, and the value will be parsed as YAML.",
         ),
     ] = None,
 ):
@@ -56,7 +57,10 @@ def run(
         logger.error("No benchmark specified, use --benchmark or --config.")
         return
     if config_path is not None:
-        config = json.loads(config_path.read_text())
+        if config_path.suffix in {".yml", ".yaml"}:
+            config = yaml.unsafe_load(config_path.read_text())
+        else:
+            config = json.loads(config_path.read_text())
         if benchmark_name is not None:
             logger.error("Both name and config file specified.")
             return
@@ -67,13 +71,13 @@ def run(
         for arg in args:
             key, value = arg.split("=")
             if key == "":
-                config["config"] = json.loads(value)
+                config["config"] = yaml.unsafe_load(value)
             else:
                 key_parts = key.split(".")
                 current = config["config"]
                 for part in key_parts[:-1]:
                     current = current.setdefault(part, {})
-                current[key_parts[-1]] = json.loads(value)
+                current[key_parts[-1]] = yaml.unsafe_load(value)
     logger.info(f"Running benchmark for {benchmark_name}")
     if not os.environ.get("TF_VAR_project"):
         logger.error("Environment variables are not set. Run `. setup.sh` to set them.")
