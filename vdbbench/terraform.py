@@ -18,6 +18,7 @@ class DatabaseDeployment(str, enum.Enum):
     """
 
     ELASTICSEARCH = "elasticsearch"
+    REDIS = "redis"
     RUNNER_ONLY = "runner_only"
 
     def __str__(self):

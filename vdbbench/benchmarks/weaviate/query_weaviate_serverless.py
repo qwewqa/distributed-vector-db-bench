@@ -28,7 +28,9 @@ class QueryWeaviateServerless(QueryBenchmark):
             auth_credentials=weaviate.auth.AuthApiKey(api_key=wcs_api_key),
         )
 
-    def load_data(self, dataset: Dataset, ef_construction: int = 100, m: int = 16, ef: int = -1):
+    def load_data(
+        self, dataset: Dataset, ef_construction: int = 100, m: int = 16, ef: int = -1
+    ):
         self.logger.info("Loading data into Weaviate")
         self.collection = self.client.collections.get(name=self.COLLECTION_NAME)
         return
@@ -64,7 +66,7 @@ class QueryWeaviateServerless(QueryBenchmark):
 
     def prepare_group(self, ef: int = -1):
         self.collection.config.update(
-            vectorizer_config=wc.Reconfigure.VectorIndex.hnsw(ef = ef)
+            vectorizer_config=wc.Reconfigure.VectorIndex.hnsw(ef=ef)
         )
 
     def prepare_query(self):

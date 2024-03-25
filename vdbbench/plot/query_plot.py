@@ -34,19 +34,21 @@ def plot_result(
 
 def plot_recall_latency(
     data: dict,
-    name: str = "Elasticsearch",
-    vary: str = "num_candidates",
-    group_by: list[str] = ["replica_count"],
+    name: str = "Weaviate",
+    vary: str = "ef",
+    group_by: list[str] = [],
     labels: dict[str, str] = {
         "shard_count": "Shard Count",
         "replica_count": "Replica Count",
         "num_candidates": "Num Candidates",
+        "ef": "ef",
     },
     out_dir: Path = Path("plots"),
 ):
     out_dir.mkdir(exist_ok=True)
     df, config_columns = parse_query_results(data)
     df["latency_mean"] = df["latency_mean"] * 1000  # Convert from s to ms
+    df["latency_p50"] = df["latency_p50"] * 1000  # Convert from s to ms
     series_columns = [
         c
         for c in config_columns
@@ -63,15 +65,21 @@ def plot_recall_latency(
             + " - "
             + ", ".join(f"{labels.get(k, k)} = {group[k].iloc[0]}" for k in group_by)
         )
-        group["series"] = [
-            ", ".join(f"{labels.get(k, k)} = {v}" for k, v in zip(series_columns, row))
-            for row in group[series_columns].itertuples(index=False)
-        ]
+        group["series"] = (
+            [
+                ", ".join(
+                    f"{labels.get(k, k)} = {v}" for k, v in zip(series_columns, row)
+                )
+                for row in group[series_columns].itertuples(index=False)
+            ]
+            if series_columns
+            else [""] * len(group)
+        )
         f = plot_result(
             group,
             plot_name,
-            "latency_mean",
-            "Mean Latency (ms)",
+            "latency_p50",
+            "Median Latency (ms)",
             "recall_mean",
             "Mean Recall",
         )
