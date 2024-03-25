@@ -217,3 +217,5 @@ id_rsa*
 results/
 # storing API keys for pinecone
 constants.py
+#storing results
+query_results.pkl
