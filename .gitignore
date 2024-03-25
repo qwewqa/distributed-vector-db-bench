@@ -219,3 +219,4 @@ results/
 constants.py
 #storing results
 query_results.pkl
+times.pkl
