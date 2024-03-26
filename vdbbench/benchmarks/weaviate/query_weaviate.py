@@ -12,7 +12,7 @@ from vdbbench.terraform import DatabaseDeployment, apply_terraform
 
 
 class QueryWeaviate(QueryBenchmark):
-    CLASS_NAME = "vdbbench"
+    INDEX_NAME = "vdbbench"
     weaviate_client: Client
 
     def run_deploy(
@@ -47,15 +47,15 @@ class QueryWeaviate(QueryBenchmark):
         }[dataset.metric]
 
         self.logger.info(f"Deleting class {class_name} if exists")
-        weaviate_client.schema.delete_class(class_name, force=True)
+        weaviate_client.schema.delete_class(class_name)
 
         self.logger.info(f"Creating class {class_name}")
         weaviate_client.schema.create_class({
             "class": class_name,
             "properties": [
                 {
-                    "name": "id",
-                    "dataType": ["int"],
+                    "name": "entity_id",
+                    "dataType": ["string"],
                     "index": True
                 },
                 {
