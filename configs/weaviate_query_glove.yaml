@@ -1,0 +1,18 @@
+benchmark: weaviate-query
+config:
+    deploy:
+        node_count: 3  # Number of nodes in the Weaviate cluster
+        machine_type: n2-standard-2  # Type of machine to use for each node
+    data:
+        dataset: glove-100d  # Name of the dataset to use
+        # Weaviate-specific configurations related to data loading, schema creation, and vector indexing
+        # (No direct equivalents of merge_index, shard_count, ef_construction, m in Weaviate)
+    group:
+        # Configuration for Weaviate's clustering or replication, if applicable
+        # (Replica count and sharding concepts may differ or not apply in Weaviate)
+    query:
+        rounds: 10  # Number of rounds to run for each query configuration
+        k: 10  # Number of nearest neighbors to return for each query
+        batch_size: 100  # Number of queries to run in each batch
+        # In Weaviate, num_candidates doesn't directly apply. Instead, use Weaviate's query mechanisms
+        # and possibly other settings related to vector search performance
