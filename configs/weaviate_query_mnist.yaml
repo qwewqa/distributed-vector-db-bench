@@ -1,0 +1,18 @@
+benchmark: weaviate-query
+config:
+    deploy:
+        node_count: 3  # This might refer to the number of Weaviate instances or nodes in the cluster
+        machine_type: n2-standard-2  # Type of machine to use for each node
+    data:
+        dataset: fashion-mnist  # Name of the dataset to use
+        # In Weaviate, instead of merge_index, shard_count, ef_construction, and m,
+        # we configure the vector index during the class creation
+    group:
+        # Weaviate does not use replica_count like Elasticsearch.
+        # Configuration for data replication or distribution is handled differently.
+    query:
+        rounds: 10  # Number of rounds to run for each query configuration
+        k: 10  # Number of nearest neighbors to return for each query
+        batch_size: 100  # Number of queries to run in each batch
+        # Weaviate automatically handles candidate selection for vector searches,
+        # so num_candidates like in Elasticsearch's context is not applicable.
