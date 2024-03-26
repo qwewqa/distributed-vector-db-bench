@@ -52,6 +52,12 @@ class QueryWeaviate(QueryBenchmark):
         self.logger.info(f"Creating class {class_name}")
         weaviate_client.schema.create_class({
             "class": class_name,
+            "vectorIndexConfig": {
+                "type": "hnsw",
+                "metric": metric,
+                "efConstruction": ef_construction,
+                "vectorCacheMaxObjects": 100000,
+            },
             "properties": [
                 {
                     "name": "entity_id",
@@ -60,11 +66,8 @@ class QueryWeaviate(QueryBenchmark):
                 },
                 {
                     "name": "vec",
-                    "dataType": ["vector"],
-                    "vectorIndexType": "hnsw",
-                    "index": True,
-                    "dimension": dataset.dims,
-                    "metricType": metric,
+                    "dataType": ["number[]"],  # Corrected data type for vector field
+                    "dimension": dataset.dims
                 },
             ]
         })
@@ -75,14 +78,16 @@ class QueryWeaviate(QueryBenchmark):
             if i % (len(data) // 10) == 0:
                 self.logger.info(f"Loading: {i}/{len(data)}")
 
-            weaviate_client.data_object.create({
-                "id": i,
-                "vec": vec,
-            }, class_name=class_name)
+            # Ensure vec is a list for JSON serialization
+            vector_data = vec.tolist() if isinstance(vec, np.ndarray) else vec
 
+            # Create the data object in Weaviate
+            weaviate_client.data_object.create({
+                "entity_id": str(i),  # Assuming 'entity_id' is the unique identifier in your schema
+                "vec": vector_data
+            }, class_name=class_name)  # Pass class_name as the second argument
 
         self.logger.info(f"Data loading completed for {class_name}")
-
 
     def prepare_group(self, replica_count: int = 2):
         # Not needed in Weaviate
