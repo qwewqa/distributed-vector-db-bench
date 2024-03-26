@@ -16,11 +16,11 @@ provider "google" {
 }
 
 resource "google_compute_network" "default" {
-  name = "elasticsearch-network"
+  name = "weaviate-network"
 }
 
 resource "google_compute_firewall" "ssh" {
-  name    = "elasticsearch-firewall-ssh"
+  name    = "weaviate-firewall-ssh"
   network = google_compute_network.default.name
 
   allow {
@@ -32,21 +32,21 @@ resource "google_compute_firewall" "ssh" {
 }
 
 resource "google_compute_firewall" "internal" {
-  name    = "elasticsearch-firewall-internal"
+  name    = "weaviate-firewall-internal"
   network = google_compute_network.default.name
 
   allow {
     protocol = "all"
   }
 
-  source_tags = ["elasticsearch"]
+  source_tags = ["weaviate"]
 }
 
 resource "google_compute_instance" "db_instances" {
   for_each     = toset([for i in range(var.node_count) : tostring(i)])
-  name         = "elasticsearch-${each.key}"
+  name         = "weaviate-${each.key}"
   machine_type = var.machine_type
-  tags         = ["elasticsearch"]
+  tags         = ["weaviate"]
   allow_stopping_for_update = true
 
   boot_disk {
@@ -70,42 +70,27 @@ resource "google_compute_instance" "db_instances" {
 
   metadata_startup_script = <<-EOF
         #!/bin/bash
-        wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
-        echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
+        # Installation commands for Weaviate
+        # Assume placeholder commands here; replace with actual Weaviate setup commands
+
+        # Example setup commands (Update with actual commands needed for Weaviate)
         sudo apt-get update
-        sudo apt-get install elasticsearch -y
+        sudo apt-get install -y docker.io
+        sudo systemctl start docker
+        sudo systemctl enable docker
 
-        sudo cat <<EOT > /etc/elasticsearch/elasticsearch.yml
-        path.data: "/var/lib/elasticsearch"
-        path.logs: "/var/log/elasticsearch"
-        xpack.security.enabled: false
-        xpack.security.autoconfiguration.enabled: false
-        http.host: 0.0.0.0
-        cluster.name: "elasticsearch"
-        node.name: "elasticsearch-${each.key}"
-        network.host: 0.0.0.0
-        discovery.seed_hosts: ["${join("\", \"", [for i in range(var.node_count) : "elasticsearch-${i}"])}"]
-        cluster.initial_master_nodes: ["${join("\", \"", [for i in range(var.node_count) : "elasticsearch-${i}"])}"]
-        EOT
-
-        # As recommended by Elasticsearch, disable swap for performance: https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-configuration-memory.html
-        sudo swapoff -a
-
-        # Remove the default keystore since we're disabling security
-        sudo rm /etc/elasticsearch/elasticsearch.keystore
-        sudo /usr/share/elasticsearch/bin/elasticsearch-keystore create
+        # Pull and run Weaviate docker image (update with actual Weaviate setup)
+        sudo docker pull semitechnologies/weaviate:latest
+        sudo docker run -d --name weaviate -p 8080:8080 semitechnologies/weaviate
 
         ${var.before_start}
-
-        sudo systemctl start elasticsearch
-        sudo systemctl enable elasticsearch
         EOF
 }
 
 resource "google_compute_instance" "runner_instance" {
-  name         = "elasticsearch-runner"
+  name         = "weaviate-runner"
   machine_type = var.machine_type
-  tags         = ["elasticsearch"]
+  tags         = ["weaviate"]
   allow_stopping_for_update = true
 
   boot_disk {
