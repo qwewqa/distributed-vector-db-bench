@@ -43,49 +43,45 @@ class LoadDatasetWeaviate(Benchmark):
         client = Client(url=config['url'])
 
         try:
-            logger.info(f"Creating class in Weaviate for dataset {self.dataset.name}")
+            class_name = f"{self.dataset.name}_class"
+            logger.info(f"Creating class in Weaviate for dataset {class_name}")
             client.schema.create_class({
-                "class": self.dataset.name,
-                "properties": [
-                    {"name": "id", "dataType": ["string"]},
-                    {"name": "vec", "dataType": ["number"], "vectorize": True}
-                ],
-                "vectorIndexType": "hnsw",
+                "class": class_name,
                 "vectorIndexConfig": {
                     "efConstruction": 128,
                     "maxConnections": 16
-                }
+                },
+                "properties": [
+                    {"name": "id", "dataType": ["string"], "index": True},
+                    {"name": "vec", "dataType": ["number[]"], "index": True}
+                ],
             })
 
             start_time = perf_counter()
 
-            logger.info(f"Loading dataset {self.dataset.name} ({len(data)} vectors)")
+            logger.info(f"Loading dataset {class_name} ({len(data)} vectors)")
             for i, vec in enumerate(data):
                 client.data_object.create(
-                    data_object={"id": str(i), "vec": vec.tolist()},
-                    class_name=self.dataset.name
+                    data_object={
+                        "id": str(i),
+                        "vec": vec.tolist()
+                    },
+                    class_name=class_name
                 )
 
             end_time = perf_counter()
             duration = end_time - start_time
 
             logger.info("Running a test query")
-            res = client.query.get(
-                class_name=self.dataset.name,
-                properties=["id"],
-                where={
-                    "path": ["vec"],
-                    "operator": "NearVector",
-                    "valueVector": data[0].tolist(),
-                    "certainty": 0.8
-                },
-                limit=10
-            )
+            res = client.query.get(class_name, ["id"]).with_near_vector({
+                "vector": data[0].tolist(),
+                "certainty": 0.8
+            }).do()
 
-            assert len(res['data']['Get'][self.dataset.name]) == 10, "Query returned wrong number of results"
+            assert len(res['data']['Get'][class_name]) == 10, "Query returned wrong number of results"
 
             logger.info("Deleting class in Weaviate")
-            client.schema.delete_class(self.dataset.name)
+            client.schema.delete_class(class_name)
 
             return {
                 "status": "success",
