@@ -1,8 +1,8 @@
-from weaviate import Client, Objects, schema
+from weaviate import Client, schema
 import time
 
 
-def create_weaviate_client(config):
+def create_weaviate_client(deploy_output: dict):
     """Creates and returns a Weaviate client.
 
     Args:
@@ -11,8 +11,9 @@ def create_weaviate_client(config):
     Returns:
         A Weaviate client instance.
     """
+    host = deploy_output["weaviate_instance_names"][0]
     return Client(
-        url=f"http://{config['host']}:{config['port']}",
+        url=f"http://{host}:{8080}",
         timeout_config=(5, 15)
     )
 

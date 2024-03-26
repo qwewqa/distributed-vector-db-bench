@@ -2,6 +2,7 @@ import traceback
 import weaviate
 
 from vdbbench.benchmarks.benchmark import Benchmark
+from vdbbench.benchmarks.weaviate.common import create_weaviate_client
 from vdbbench.terraform import DatabaseDeployment, apply_terraform
 
 
@@ -15,7 +16,7 @@ class TestWeaviate(Benchmark):
         return apply_terraform(DatabaseDeployment.WEAVIATE)
 
     def run(self, config: dict) -> dict:
-        client = self.create_weaviate_client(config)
+        client = create_weaviate_client(config)
 
         obj = {
             "name": "vdbbench",
@@ -46,16 +47,3 @@ class TestWeaviate(Benchmark):
                 "detail": f"Weaviate test failed with error: {e}",
                 "traceback": f"{traceback.format_exc()}",
             }
-
-    def create_weaviate_client(self, config):
-        """Creates a Weaviate client from the configuration.
-
-        Args:
-            config: The output from the Terraform module for the Weaviate deployment.
-
-        Returns:
-            A Weaviate client.
-        """
-        return weaviate.Client(
-            url=f"http://{config['weaviate_host']}:{config['weaviate_port']}"
-        )
