@@ -7,6 +7,5 @@ h5py==3.10.0
 numpy==1.26.4
 seaborn==0.13.2
 pinecone-client==3.1.0
-pinecone-datasets==0.7.0
 weaviate-client==4.5.4
 pyyaml==6.0.1

@@ -82,3 +82,29 @@ class QueryWeaviate(QueryBenchmark):
 
 
         self.logger.info(f"Data loading completed for {class_name}")
+
+
+    def prepare_group(self, replica_count: int = 2):
+        # Not needed in Weaviate
+        pass
+
+    def prepare_query(self):
+        # Not needed in Weaviate
+        pass
+
+    def query(self, queries: np.ndarray, k: int = 10) -> list[list[int]]:
+        results = []
+        for query_vec in queries:
+            result = self.weaviate_client.query.get(
+                class_name=self.class_name,
+                properties=["id"],
+                where={
+                    "path": ["vec"],
+                    "operator": "Knn",
+                    "valueVector": query_vec.tolist(),
+                    "certainty": k
+                }
+            )
+            results.append([int(obj['id']) for obj in result['data']['Get'][self.class_name]])
+
+        return results
