@@ -28,15 +28,15 @@ python -m vdbbench run --benchmark elasticsearch-test
 ```
 ```bash
 # Benchmark elasticsearch query performance on fashion-mnist
-python -m vdbbench run --benchmark elasticsearch-query dataset=\"fashion-mnist\"
+python -m vdbbench run --benchmark elasticsearch-query dataset=fashion-mnist
 ```
 ```bash
 # Benchmark elasticsearch query with the elasticsearch_query_mnist.json config
-python -m vdbbench run --config configs/elasticsearch_query_mnist.json
+python -m vdbbench run --config configs/elasticsearch_query_mnist.yaml
 ```
 ```bash
 # Benchmark elasticsearch query with the elasticsearch_query_mnist.json config, overriding data.dataset
-python -m vdbbench run --config configs/elasticsearch_query_mnist.json data.dataset=\"glove-25d\"
+python -m vdbbench run --config configs/elasticsearch_query_mnist.yaml data.dataset=glove-25d
 ```
 ```bash
 # Destroy all terraform resources

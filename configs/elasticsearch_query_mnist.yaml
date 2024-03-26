@@ -1,0 +1,30 @@
+benchmark: elasticsearch-query
+config:
+    deploy:
+        node_count: 3
+        machine_type: n2-standard-2
+    data:
+        dataset: fashion-mnist
+        merge_index: true
+        "*shard_count":
+            - 1
+            - 2
+            - 3
+        ef_construction: 100
+        m: 16
+    group:
+        "*replica_count":
+            - 0
+            - 1
+            - 2
+    query:
+        rounds: 10
+        k: 10
+        batch_size: 100
+        "*num_candidates":
+            - 10
+            - 20
+            - 40
+            - 80
+            - 160
+            - 320
