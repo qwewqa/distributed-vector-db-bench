@@ -5,3 +5,4 @@ fabric==3.2.2
 requests==2.31.0
 h5py==3.10.0
 numpy==1.26.4
+weaviate-client==3.26.2
