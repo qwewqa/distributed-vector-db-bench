@@ -31,6 +31,19 @@ resource "google_compute_firewall" "ssh" {
   source_ranges = ["0.0.0.0/0"]
 }
 
+resource "google_compute_firewall" "weaviate_api" {
+  name    = "weaviate-firewall-api"
+  network = google_compute_network.default.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["8080"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+}
+
+
 resource "google_compute_firewall" "internal" {
   name    = "weaviate-firewall-internal"
   network = google_compute_network.default.name
@@ -68,21 +81,19 @@ resource "google_compute_instance" "db_instances" {
     ssh-keys = "${var.ssh_user}:${var.ssh_public_key}"
   }
 
-  metadata_startup_script = <<-EOF
+   metadata_startup_script = <<-EOF
         #!/bin/bash
-        # Installation commands for Weaviate
-        # Assume placeholder commands here; replace with actual Weaviate setup commands
-
-        # Example setup commands (Update with actual commands needed for Weaviate)
+        # Update and install necessary packages
         sudo apt-get update
         sudo apt-get install -y docker.io
         sudo systemctl start docker
         sudo systemctl enable docker
 
-        # Pull and run Weaviate docker image (update with actual Weaviate setup)
+        # Pull and run Weaviate docker image
         sudo docker pull semitechnologies/weaviate:latest
-        sudo docker run -d --name weaviate -p 8080:8080 semitechnologies/weaviate
+        sudo docker run -d --name weaviate -p 8080:8080 semitechnologies/weaviate:latest
 
+        # Add any additional setup or configuration below
         ${var.before_start}
         EOF
 }

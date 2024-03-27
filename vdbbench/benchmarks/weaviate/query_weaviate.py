@@ -59,12 +59,10 @@ class QueryWeaviate(QueryBenchmark):
                 {
                     "name": "entity_id",
                     "dataType": ["string"],
-                    "index": True
                 },
                 {
                     "name": "vec",
                     "dataType": ["number[]"],  # Corrected data type for vector field
-                    "dimension": dataset.dims
                 },
             ]
         })
@@ -82,10 +80,9 @@ class QueryWeaviate(QueryBenchmark):
             # Ensure vec is a list for JSON serialization
             vector_data = vec.tolist() if isinstance(vec, np.ndarray) else vec
 
-
             # Create the data object in Weaviate
             weaviate_client.data_object.create({
-                "entity_id": str(i),  # Assuming 'entity_id' is the unique identifier in your schema
+                "entity_id": str(i),
                 "vec": vector_data
             }, class_name=class_name)  # Pass class_name as the second argument
 

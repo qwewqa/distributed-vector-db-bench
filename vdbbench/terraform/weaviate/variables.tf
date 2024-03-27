@@ -48,5 +48,4 @@ variable "ssh_user" {
 variable "ssh_public_key" {
   type        = string
   description = "The SSH public key to use for the instances"
-  
 }
