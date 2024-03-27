@@ -52,7 +52,7 @@ class LoadDatasetWeaviate(Benchmark):
                     "maxConnections": 16
                 },
                 "properties": [
-                    {"name": "id", "dataType": ["string"], "index": True},
+                    {"name": "entity_id", "dataType": ["string"], "index": True},
                     {"name": "vec", "dataType": ["number[]"], "index": True}
                 ],
             })
@@ -63,7 +63,7 @@ class LoadDatasetWeaviate(Benchmark):
             for i, vec in enumerate(data):
                 client.data_object.create(
                     data_object={
-                        "id": str(i),
+                        "entity_id": str(i),
                         "vec": vec.tolist()
                     },
                     class_name=class_name
@@ -73,7 +73,7 @@ class LoadDatasetWeaviate(Benchmark):
             duration = end_time - start_time
 
             logger.info("Running a test query")
-            res = client.query.get(class_name, ["id"]).with_near_vector({
+            res = client.query.get(class_name, ["entity_id"]).with_near_vector({
                 "vector": data[0].tolist(),
                 "certainty": 0.8
             }).do()
