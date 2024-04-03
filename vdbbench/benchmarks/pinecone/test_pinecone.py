@@ -1,5 +1,5 @@
 from pinecone import Pinecone, ServerlessSpec
-from pinecone_datasets import list_datasets, load_dataset
+from pinecone_datasets import load_dataset
 from constants import PINECONE_API_KEY
 import pandas as pd
 import numpy as np
@@ -35,7 +35,7 @@ def upload_data(dataset=dataset, index=index):
 
 upload_latency = upload_data()
 batch_size = 100
-query_vectors = np.asarray(glove100_dataset.queries["vector"])
+query_vectors = [item.tolist() for item in glove100_dataset.queries["vector"]]
 query_results = glove100_dataset.queries["blob"]
 
 def query(query_vectors=query_vectors, index=index, k=100):
