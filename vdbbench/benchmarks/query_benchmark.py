@@ -165,6 +165,9 @@ class QueryBenchmark(Benchmark):
                 query_results = []
                 for query_config in query_configs:
                     self.logger.info(f"Running query configuration: {query_config}")
+                    self.logger.info("Running warmup queries")
+                    self._do_queries(dataset, query_config | {"rounds": 1})
+                    self.logger.info("Running actual queries")
                     query_result = self._do_queries(dataset, query_config)
                     query_results.append(query_result)
                     self.logger.info(f"Query result: {query_result}")
