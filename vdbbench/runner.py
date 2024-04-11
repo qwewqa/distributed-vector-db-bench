@@ -36,7 +36,7 @@ def retry_execute_runner(
     name: str,
     config: dict,
     deploy_outputs: dict,
-    timeout: int = 300,
+    timeout: int = 3000,
     interval: int = 5,
 ) -> dict:
     """Retries the execution of the benchmark on the runner instance until it becomes available or the timeout is reached.

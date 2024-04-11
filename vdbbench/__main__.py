@@ -80,7 +80,7 @@ def run(
                 current[key_parts[-1]] = yaml.unsafe_load(value)
     logger.info(f"Running benchmark for {benchmark_name}")
     if not os.environ.get("TF_VAR_project"):
-        logger.error("Environment variables are not set. Run `. setup.sh` to set them.")
+        logger.error("Environment variables are not set. Run `. setup. to set them.")
         return
     if benchmark_name in benchmarks.BENCHMARKS:
         benchmark = benchmarks.BENCHMARKS[benchmark_name](**config["config"])

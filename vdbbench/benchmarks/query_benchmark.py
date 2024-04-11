@@ -157,7 +157,7 @@ class QueryBenchmark(Benchmark):
             self.logger.info(f"Running data configuration: {data_config}")
             dataset_name = data_config["dataset"]
             dataset = self._load_dataset(dataset_name)
-            # self._call_with_config(self.load_data, (data_config | {"dataset": dataset}))
+            self._call_with_config(self.load_data, (data_config | {"dataset": dataset}))
             group_results = []
             for group_config in group_configs:
                 self.logger.info(f"Running group configuration: {group_config}")

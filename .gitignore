@@ -220,4 +220,6 @@ constants.py
 #storing results
 query_results.pkl
 times.pkl
+query_results_k100.pkl
+times_k100.pkl
 .idea
