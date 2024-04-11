@@ -64,8 +64,8 @@ class LoadDatasetWeaviate(Benchmark):
                 client.data_object.create(
                     data_object={
                         "entity_id": str(i),
-                        "vec": vec.tolist()
                     },
+                    vector=vec.tolist(),
                     class_name=class_name
                 )
 
