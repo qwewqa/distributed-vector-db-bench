@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import numpy as np
 from weaviate import Client
+import weaviate
 from vdbbench.benchmarks.query_benchmark import QueryBenchmark
 from vdbbench.benchmarks.weaviate.common import (create_weaviate_client)
 
@@ -62,8 +63,11 @@ class QueryWeaviate(QueryBenchmark):
                     "dataType": ["string"],
                 },
                 {
-                    "name": "vec",
+                    "name": "vector",
                     "dataType": ["number[]"],  # Corrected data type for vector field
+                    "description": "A numerical vector representing the entity",
+                    "vectorIndexType": "hnsw",
+                    "vectorizePropertyName": False
                 },
             ]
         })
@@ -75,17 +79,20 @@ class QueryWeaviate(QueryBenchmark):
                 self.logger.info(f"Loading: {i}/{len(data)}")
 
             # Normalize the vector
-            norm = np.linalg.norm(vec)
-            vec = vec / norm if norm != 0 else vec
+            # norm = np.linalg.norm(vec)
+            # vec = vec / norm if norm != 0 else vec
 
             # Ensure vec is a list for JSON serialization
-            # vector_data = vec.tolist() if isinstance(vec, np.ndarray) else vec
+            vector_data = vec.tolist() if isinstance(vec, np.ndarray) else vec
+
+            # self.logger.info("Vector data: " + str(vector_data))
 
             # Create the data object in Weaviate
             weaviate_client.data_object.create({
                 "entity_id": str(i),
-                "vec": vec
-            }, class_name=class_name)  # Pass class_name as the second argument
+            }, vector=vector_data, class_name=class_name)  # Pass class_name as the second argument
+
+            self.logger.info("Data object created, id: " + str(i))
 
         self.logger.info(f"Data loading completed for {class_name}")
 
@@ -100,29 +107,21 @@ class QueryWeaviate(QueryBenchmark):
     def query(self, queries: np.ndarray, k: int = 10) -> list[list[int]]:
         results = []
         for query_vec in queries:
-            # norm = np.linalg.norm(query_vec)
-            # query_vec = query_vec / norm if norm != 0 else query_vec
-            # print(f"Vector - {query_vec.tolist()}")
-
             # Start the query and specify the class and properties to retrieve
-            query_builder = self.weaviate_client.query.get(
+            result = self.weaviate_client.query.get(
                 class_name="vdbbench",
-                properties=["vec"]
-            )
-
-            # Add the vector search conditions using with_near_vector
-            query_builder = query_builder.with_near_vector({
+                properties=["entity_id"]
+            ).with_near_vector({
                 "vector": query_vec,
-            })
+            }).with_limit(k).do()
 
-            # Execute the query
-            result = query_builder.do()
+            # print(json.dumps(result, indent=2))
 
-            print(json.dumps(result, indent=2))
-
-            # Process the results
-            if 'data' in result and 'Get' in result['data'] and self.class_name in result['data']['Get']:
-                query_results = result['data']['Get'][self.class_name]
-                results.append([int(obj['id']) for obj in query_results])
+            try:
+                query_results = result['data']['Get']['Vdbbench']
+                entity_ids = [int(obj['entity_id']) for obj in query_results]
+                results.append(entity_ids)
+            except Exception as e:
+                print(f"An error occurred while processing the query results: {str(e)}")
 
         return results
