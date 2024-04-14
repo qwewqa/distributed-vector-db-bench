@@ -41,7 +41,6 @@ class QueryElasticsearch(QueryBenchmark):
     def load_data(
         self,
         dataset: Dataset,
-        merge_index: bool = True,
         shard_count: int = 3,
         ef_construction: int = 100,
         m: int = 16,
@@ -90,7 +89,7 @@ class QueryElasticsearch(QueryBenchmark):
 
         def chunked():
             for i, vec in enumerate(data):
-                if i % (len(data) // 10) == 0:
+                if i % (len(data) // 10 + 1) == 0:
                     self.logger.info(f"Loading: {i}/{len(data)}")
                 yield {
                     "_index": name,
@@ -106,10 +105,6 @@ class QueryElasticsearch(QueryBenchmark):
             chunked(),
             chunk_size=1000,
         )
-
-        if merge_index:
-            self.logger.info("Forcing merge index")
-            es.indices.forcemerge(index=name, max_num_segments=1, request_timeout=3000)
 
         self.logger.info("Refreshing index")
         es.indices.refresh(index=name)
@@ -128,6 +123,8 @@ class QueryElasticsearch(QueryBenchmark):
     def prepare_query(self):
         self.logger.info("Clearing cache")
         self.es.indices.clear_cache(index=self.INDEX_NAME)
+        self.logger.info("Forcing merge index")
+        self.es.indices.forcemerge(index=self.INDEX_NAME, max_num_segments=1, request_timeout=3000)
 
     def query(
         self, queries: np.ndarray, k: int = 10, num_candidates: int = 160
@@ -144,6 +141,7 @@ class QueryElasticsearch(QueryBenchmark):
                         "k": k,
                         "num_candidates": num_candidates,
                     },
+                    "size": k,
                     "_source": False,
                     "docvalue_fields": ["id"],
                     "stored_fields": "_none_",
@@ -154,7 +152,7 @@ class QueryElasticsearch(QueryBenchmark):
             index=self.INDEX_NAME,
             body=body,
             filter_path=["responses.hits.hits.fields.id"],
-            request_timeout=10,
+            request_timeout=100,
         )
 
         return [

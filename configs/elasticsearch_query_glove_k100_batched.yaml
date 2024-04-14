@@ -4,7 +4,7 @@ config:
         node_count: 3
         machine_type: n2-standard-2
     data:
-        dataset: fashion-mnist
+        dataset: glove-100d
         "*shard_count":
             - 1
             - 2
@@ -19,10 +19,22 @@ config:
     query:
         rounds: 1
         k: 100
-        batch_size: 1
+        batch_size: 100
         "*num_candidates":
             - 100
+            - 119
+            - 141
+            - 168
             - 200
+            - 238
+            - 283
+            - 336
             - 400
+            - 476
+            - 566
+            - 673
             - 800
+            - 951
+            - 1131
+            - 1345
             - 1600

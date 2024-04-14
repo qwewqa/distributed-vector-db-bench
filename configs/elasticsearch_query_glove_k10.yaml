@@ -5,7 +5,6 @@ config:
         machine_type: n2-standard-2
     data:
         dataset: glove-100d
-        merge_index: true
         "*shard_count":
             - 1
             - 2
@@ -23,15 +22,17 @@ config:
         batch_size: 100
         "*num_candidates":
             - 10
-            - 15
+            - 14
             - 20
-            - 30
+            - 28
             - 40
-            - 60
+            - 57
             - 80
-            - 120
+            - 113
             - 160
-            - 240
+            - 226
             - 320
-            - 480
+            - 453
             - 640
+            - 905
+            - 1280
