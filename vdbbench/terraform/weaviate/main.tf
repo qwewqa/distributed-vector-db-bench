@@ -65,6 +65,11 @@ resource "helm_release" "weaviate" {
     name  = "replicaCount"
     value = "1"
   }
+
+  set {
+    name  = "service.type"
+    value = "LoadBalancer"
+  }
 }
 
 # add code for runner instance
