@@ -52,26 +52,3 @@ def create_schema(client):
     client.schema.create_class(person_class)
     print("Schema created successfully.")
 
-
-def add_data(client):
-    """Adds data to Weaviate.
-
-    Args:
-        client: The Weaviate client.
-    """
-    person = {
-        "name": "John Doe",
-        "age": 30
-    }
-    client.data_object.create(data_object=person, class_name="Person")
-    print("Data added successfully.")
-
-
-def query_data(client):
-    """Queries data from Weaviate.
-
-    Args:
-        client: The Weaviate client.
-    """
-    result = client.query.get(class_name="Person", properties=["name", "age"]).do()
-    print("Query results:", result)
