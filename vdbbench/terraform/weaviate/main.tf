@@ -4,7 +4,14 @@ terraform {
       source  = "hashicorp/google"
       version = "5.20.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+    }
   }
+  required_version = ">= 1.0"
 }
 
 provider "google" {
@@ -15,94 +22,63 @@ provider "google" {
   zone    = var.zone
 }
 
-resource "google_compute_network" "default" {
-  name = "weaviate-network"
+
+resource "google_container_cluster" "weaviate_cluster" {
+  name     = "weaviate-cluster"
+  location = var.region
+
+  initial_node_count = 1
+
+  node_config {
+    machine_type = var.machine_type
+    disk_size_gb = 50
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+  }
 }
 
-resource "google_compute_firewall" "ssh" {
-  name    = "weaviate-firewall-ssh"
-  network = google_compute_network.default.name
-
-  allow {
-    protocol = "tcp"
-    ports    = ["22"]
-  }
-
-  source_ranges = ["0.0.0.0/0"]
+provider "kubernetes" {
+  load_config_file       = false
+  host                   = google_container_cluster.weaviate_cluster.endpoint
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(google_container_cluster.weaviate_cluster.master_auth.0.cluster_ca_certificate)
 }
 
-resource "google_compute_firewall" "weaviate_api" {
-  name    = "weaviate-firewall-api"
-  network = google_compute_network.default.name
+data "google_client_config" "default" {}
 
-  allow {
-    protocol = "tcp"
-    ports    = ["8080"]
+provider "helm" {
+  kubernetes {
+    host                   = google_container_cluster.weaviate_cluster.endpoint
+    token                  = data.google_client_config.default.access_token
+    cluster_ca_certificate = base64decode(google_container_cluster.weaviate_cluster.master_auth.0.cluster_ca_certificate)
   }
-
-  source_ranges = ["0.0.0.0/0"]
 }
 
+resource "helm_release" "weaviate" {
+  name       = "weaviate"
+  repository = "https://weaviate.github.io/weaviate-helm"
+  chart      = "weaviate"
+  version    = "16.8.8"
 
-resource "google_compute_firewall" "internal" {
-  name    = "weaviate-firewall-internal"
-  network = google_compute_network.default.name
-
-  allow {
-    protocol = "all"
+  set {
+    name  = "replicaCount"
+    value = "1"
   }
-
-  source_tags = ["weaviate"]
 }
 
-resource "google_compute_instance" "db_instances" {
-  for_each     = toset([for i in range(var.node_count) : tostring(i)])
-  name         = "weaviate-${each.key}"
-  machine_type = var.machine_type
-  tags         = ["weaviate"]
-  allow_stopping_for_update = true
-
-  boot_disk {
-    initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2204-lts"
-      type = "pd-ssd"
-      size = 128
-    }
-  }
-
-  network_interface {
-    network = google_compute_network.default.name
-    access_config {
-      // Ephemeral IP
-    }
-  }
-
-  metadata = {
-    ssh-keys = "${var.ssh_user}:${var.ssh_public_key}"
-  }
-
-   metadata_startup_script = <<-EOF
-        #!/bin/bash
-        # Update and install necessary packages
-        sudo apt-get update
-        sudo apt-get install -y docker.io
-        sudo systemctl start docker
-        sudo systemctl enable docker
-
-        # Pull and run Weaviate docker image
-        sudo docker pull semitechnologies/weaviate:latest
-        sudo docker run -d --name weaviate -p 8080:8080 semitechnologies/weaviate:latest
-
-        # Add any additional setup or configuration below
-        ${var.before_start}
-        EOF
-}
-
+# add code for runner instance
 resource "google_compute_instance" "runner_instance" {
   name         = "weaviate-runner"
-  machine_type = var.machine_type
+  machine_type = var.machine_type  # Using the same machine type as the cluster nodes
+  zone         = var.zone
   tags         = ["weaviate"]
-  allow_stopping_for_update = true
+  network_interface {
+    network = google_compute_network.default.name
+    access_config {
+      // This block is empty to assign a public IP
+    }
+  }
 
   boot_disk {
     initialize_params {
@@ -120,4 +96,10 @@ resource "google_compute_instance" "runner_instance" {
   metadata = {
     ssh-keys = "${var.ssh_user}:${var.ssh_public_key}"
   }
+}
+
+
+
+resource "google_compute_network" "default" {
+  name = "weaviate-network"
 }
