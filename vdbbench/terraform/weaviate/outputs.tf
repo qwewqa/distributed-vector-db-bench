@@ -1,20 +1,19 @@
-output "weaviate_instance_names" {
-  value = [for instance in google_compute_instance.db_instances : instance.name]
-  description = "The names of the Weaviate instances."
+output "cluster_endpoint" {
+  value = google_container_cluster.weaviate_cluster.endpoint
+  description= "The endpoint of the Kubernetes cluster"
 }
 
-output "weaviate_instance_ips" {
-  value = [for instance in google_compute_instance.db_instances : instance.network_interface[0].access_config[0].nat_ip]
-  description = "The external IP addresses of the Weaviate instances."
-}
-
-
-output "runner_instance_name" {
-  value       = google_compute_instance.runner_instance.name
-  description = "The name of the runner instance."
+output "weaviate_endpoint" {
+  value = "http://${google_container_cluster.weaviate_cluster.endpoint}:8080"
+  description= "The endpoint of the Weaviate cluster"
 }
 
 output "runner_instance_ip" {
-  value       = google_compute_instance.runner_instance.network_interface[0].access_config[0].nat_ip
-  description = "The external IP address of the runner instance."
+  value = google_compute_instance.runner_instance.network_interface.0.access_config.0.nat_ip
+  description="The public IP of the runner instance"
 }
+
+output "weaviate_external_ip" {
+  value = data.kubernetes_service.weaviate.status.0.load_balancer.0.ingress.0.ip
+}
+

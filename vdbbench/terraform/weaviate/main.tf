@@ -39,10 +39,15 @@ resource "google_container_cluster" "weaviate_cluster" {
 }
 
 provider "kubernetes" {
-  load_config_file       = false
-  host                   = google_container_cluster.weaviate_cluster.endpoint
+  host                   = "https://${google_container_cluster.weaviate_cluster.endpoint}"
   token                  = data.google_client_config.default.access_token
   cluster_ca_certificate = base64decode(google_container_cluster.weaviate_cluster.master_auth.0.cluster_ca_certificate)
+}
+
+data "kubernetes_service" "weaviate" {
+  metadata {
+    name = "weaviate"
+  }
 }
 
 data "google_client_config" "default" {}
@@ -78,8 +83,9 @@ resource "google_compute_instance" "runner_instance" {
   machine_type = var.machine_type  # Using the same machine type as the cluster nodes
   zone         = var.zone
   tags         = ["weaviate"]
+
   network_interface {
-    network = google_compute_network.default.name
+    network = google_compute_network.default.self_link
     access_config {
       // This block is empty to assign a public IP
     }
@@ -88,13 +94,6 @@ resource "google_compute_instance" "runner_instance" {
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
-    }
-  }
-
-  network_interface {
-    network = google_compute_network.default.name
-    access_config {
-      // Ephemeral IP
     }
   }
 

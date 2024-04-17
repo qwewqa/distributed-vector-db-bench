@@ -30,7 +30,7 @@ variable "machine_type" {
 variable "node_count" {
   type        = number
   description = "The number of nodes to deploy"
-  default     = 3
+  default     = 1
 }
 
 variable "before_start" {
