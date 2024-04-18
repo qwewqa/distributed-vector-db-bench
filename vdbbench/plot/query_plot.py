@@ -3,6 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import numpy as np
 
 
 def plot_result(
@@ -14,6 +15,7 @@ def plot_result(
     y_label: str,
 ):
     f, ax = plt.subplots()
+    df = df.explode(x)
     sns.lineplot(
         data=df,
         x=x,
@@ -24,11 +26,13 @@ def plot_result(
         markers=True,
         style="series",
         sort=False,
+        errorbar=None,
+        orient="y",
     )
     ax.set_title(title)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-    ax.legend().set_title(None)
+    ax.legend(loc="lower right").set_title(None)
     return f
 
 
@@ -46,7 +50,7 @@ def plot_recall_latency(
 ):
     out_dir.mkdir(exist_ok=True)
     df, config_columns = parse_query_results(data)
-    df["latency_mean"] = df["latency_mean"] * 1000  # Convert from s to ms
+    df["latency"] = df["latency"] * 1000  # Convert from s to ms
     series_columns = [
         c
         for c in config_columns
@@ -70,7 +74,7 @@ def plot_recall_latency(
         f = plot_result(
             group,
             plot_name,
-            "latency_mean",
+            "latency",
             "Mean Latency (ms)",
             "recall_mean",
             "Mean Recall",
@@ -100,7 +104,8 @@ def parse_query_results(data: dict) -> tuple[pd.DataFrame, list[str]]:
                 for k, v in query.items():
                     if k == "query_config":
                         continue
-                    row.update({f"{k}_{kk}": vv for kk, vv in v.items()})
+                    row[k] = np.array(v)
+                    row[f"{k}_mean"] = row[k].mean()
                 rows.append(row)
 
     return pd.DataFrame(rows), config_columns
