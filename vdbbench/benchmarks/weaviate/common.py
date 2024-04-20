@@ -1,6 +1,7 @@
 from weaviate import Client, schema
 import time
-
+import weaviate
+from weaviate.auth import AuthApiKey
 
 def create_weaviate_client(deploy_output: dict):
     """Creates and returns a Weaviate client.
@@ -11,12 +12,11 @@ def create_weaviate_client(deploy_output: dict):
     Returns:
         A Weaviate client instance.
     """
-    host = deploy_output["weaviate_instance_names"][0]
+    host = deploy_output["weaviate_external_ip"]
     return Client(
-        url=f"http://{host}:{8080}",
+        url=f"http://{host}:80",
         timeout_config=(5, 15)
     )
-
 
 def wait_for_weaviate(client, timeout=300):
     """Waits for Weaviate to become ready.
