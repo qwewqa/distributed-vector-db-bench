@@ -42,3 +42,9 @@ python -m vdbbench run --config configs/elasticsearch_query_mnist.yaml data.data
 # Destroy all terraform resources
 python -m vdbbench destroy-all
 ```
+
+### Generate Plots
+```bash
+# Plot recall latency
+python -m vdbbench plot-recall-latency DATA
+```
