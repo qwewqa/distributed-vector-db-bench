@@ -4,7 +4,7 @@ output "cluster_endpoint" {
 }
 
 output "weaviate_endpoint" {
-  value = "http://${google_container_cluster.weaviate_cluster.endpoint}:8080"
+  value = "http://${google_container_cluster.weaviate_cluster.endpoint}"
   description= "The endpoint of the Weaviate cluster"
 }
 
@@ -14,6 +14,6 @@ output "runner_instance_ip" {
 }
 
 output "weaviate_external_ip" {
-  value = data.kubernetes_service.weaviate.status.0.load_balancer.0.ingress.0.ip
+#  value = helm_release.weaviate.status.0.load_balancer.0.ingress.0.ip
+   value = data.kubernetes_service.weaviate.status.0.load_balancer.0.ingress.0.ip
 }
-

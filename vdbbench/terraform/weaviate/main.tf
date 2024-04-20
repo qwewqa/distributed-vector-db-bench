@@ -27,6 +27,9 @@ resource "google_container_cluster" "weaviate_cluster" {
   name     = "weaviate-cluster"
   location = var.region
 
+  # Set this to false to disable deletion protection
+  deletion_protection = false
+
   initial_node_count = 1
 
   node_config {
@@ -35,7 +38,9 @@ resource "google_container_cluster" "weaviate_cluster" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
     ]
+    tags = ["weaviate"]
   }
+
 }
 
 provider "kubernetes" {
@@ -85,7 +90,7 @@ resource "google_compute_instance" "runner_instance" {
   tags         = ["weaviate"]
 
   network_interface {
-    network = google_compute_network.default.self_link
+    network = google_compute_network.default.name
     access_config {
       // This block is empty to assign a public IP
     }
@@ -102,8 +107,19 @@ resource "google_compute_instance" "runner_instance" {
   }
 }
 
-
-
 resource "google_compute_network" "default" {
   name = "weaviate-network"
+}
+
+resource "google_compute_firewall" "allow_ssh" {
+  name    = "ssh"
+  network = google_compute_network.default.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "8080"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]  # Caution: This allows SSH from any IP. Adjust accordingly based on your security requirements.
+  target_tags   = ["weaviate"]
 }
