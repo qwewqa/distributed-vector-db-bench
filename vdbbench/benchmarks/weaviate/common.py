@@ -34,21 +34,3 @@ def wait_for_weaviate(client, timeout=300):
     raise TimeoutError("Weaviate did not become ready in time.")
 
 
-def create_schema(client):
-    """Creates a basic schema in Weaviate.
-
-    Args:
-        client: The Weaviate client.
-    """
-    person_class = schema.Class(
-        name="Person",
-        description="A person",
-        properties=[
-            schema.Property(name="name", data_type=["string"]),
-            schema.Property(name="age", data_type=["int"])
-        ]
-    )
-
-    client.schema.create_class(person_class)
-    print("Schema created successfully.")
-
