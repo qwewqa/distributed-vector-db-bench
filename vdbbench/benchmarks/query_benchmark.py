@@ -165,9 +165,11 @@ class QueryBenchmark(Benchmark):
                 query_results = []
                 for query_config in query_configs:
                     self.logger.info(f"Running query configuration: {query_config}")
+                    self.logger.info("Running warmup queries")
+                    self._do_queries(dataset, query_config | {"rounds": 1})
+                    self.logger.info("Running actual queries")
                     query_result = self._do_queries(dataset, query_config)
                     query_results.append(query_result)
-                    self.logger.info(f"Query result: {query_result}")
                 group_results.append(
                     GroupResult(group_config=group_config, queries=query_results)
                 )
@@ -193,9 +195,9 @@ class QueryBenchmark(Benchmark):
         relative_error = np.concatenate([r.relative_error for r in results])
         return QueryResult(
             query_config=query_config,
-            latency=Summary.from_array(latency, worst="max"),
-            recall=Summary.from_array(recall, worst="min"),
-            relative_error=Summary.from_array(relative_error, worst="max"),
+            latency=latency.tolist(),
+            recall=recall.tolist(),
+            relative_error=relative_error.tolist(),
         )
 
     def _do_query_round(self, dataset: Dataset, query_config: dict) -> QueryRoundResult:
@@ -446,9 +448,9 @@ class GroupResult:
 @dataclass
 class QueryResult:
     query_config: dict
-    latency: Summary
-    recall: Summary
-    relative_error: Summary
+    latency: list[float]
+    recall: list[float]
+    relative_error: list[float]
 
 
 @dataclass
@@ -456,37 +458,3 @@ class QueryRoundResult:
     latency: np.ndarray
     recall: np.ndarray
     relative_error: np.ndarray
-
-
-@dataclass
-class Summary:
-    mean: float
-    std: float
-    min: float
-    max: float
-    p25: float
-    p50: float
-    p75: float
-    p90: float
-    p95: float
-    p99: float
-    p999: float
-
-    @classmethod
-    def from_array(cls, arr: np.ndarray, worst: Literal["max", "min"]) -> Summary:
-        def percentile(p):
-            return np.percentile(arr, p if worst == "max" else 100 - p)
-
-        return cls(
-            mean=arr.mean(),
-            std=arr.std(),
-            min=arr.min(),
-            max=arr.max(),
-            p25=percentile(25),
-            p50=percentile(50),
-            p75=percentile(75),
-            p90=percentile(90),
-            p95=percentile(95),
-            p99=percentile(99),
-            p999=percentile(99.9),
-        )

@@ -1,0 +1,38 @@
+benchmark: elasticsearch-query
+config:
+    deploy:
+        node_count: 3
+        machine_type: n2-standard-2
+    data:
+        dataset: glove-100d
+        "*shard_count":
+            - 1
+            - 2
+            - 3
+        ef_construction: 100
+        m: 16
+    group:
+        "*replica_count":
+            - 0
+            - 1
+            - 2
+    query:
+        rounds: 10
+        k: 10
+        batch_size: 100
+        "*num_candidates":
+            - 10
+            - 14
+            - 20
+            - 28
+            - 40
+            - 57
+            - 80
+            - 113
+            - 160
+            - 226
+            - 320
+            - 453
+            - 640
+            - 905
+            - 1280
