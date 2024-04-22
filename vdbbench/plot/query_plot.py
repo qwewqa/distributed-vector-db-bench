@@ -37,7 +37,7 @@ def plot_result(
 
 
 def plot_recall_latency(
-    data: dict,
+    data: dict | pd.DataFrame,
     name: str = "Elasticsearch",
     vary: str = "num_candidates",
     group_by: list[str] = ["replica_count"],
@@ -49,7 +49,8 @@ def plot_recall_latency(
     out_dir: Path = Path("plots"),
 ):
     out_dir.mkdir(exist_ok=True)
-    df, config_columns = parse_query_results(data)
+    df = parse_query_results(data)
+    config_columns = df.columns[:df.columns.get_loc("latency")]
     df["latency"] = df["latency"] * 1000  # Convert from s to ms
     series_columns = [
         c
@@ -86,13 +87,10 @@ def plot_recall_latency(
         plt.close(f)
 
 
-def parse_query_results(data: dict) -> tuple[pd.DataFrame, list[str]]:
+def parse_query_results(data: dict | pd.DataFrame) -> pd.DataFrame:
+    if isinstance(data, pd.DataFrame):
+        return data
     data = data["data"]
-    config_columns = []
-    config_columns.extend(data[0]["data_config"].keys())
-    config_columns.extend(data[0]["groups"][0]["group_config"].keys())
-    config_columns.extend(data[0]["groups"][0]["queries"][0]["query_config"].keys())
-
     rows = []
     for data_config in data:
         for group in data_config["groups"]:
@@ -108,4 +106,4 @@ def parse_query_results(data: dict) -> tuple[pd.DataFrame, list[str]]:
                     row[f"{k}_mean"] = row[k].mean()
                 rows.append(row)
 
-    return pd.DataFrame(rows), config_columns
+    return pd.DataFrame(rows)

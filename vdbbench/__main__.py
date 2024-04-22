@@ -86,7 +86,6 @@ def run(
         benchmark = benchmarks.BENCHMARKS[benchmark_name](**config["config"])
         deploy_result = benchmark.deploy()
         results = retry_execute_runner(benchmark_name, config, deploy_result)
-        logger.info(results)
         save_results(benchmark_name, results)
     else:
         logger.error(f"Unknown benchmark: {benchmark_name}")

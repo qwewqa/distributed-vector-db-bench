@@ -17,9 +17,9 @@ config:
             - 1
             - 2
     query:
-        rounds: 10
+        rounds: 5
         k: 10
-        batch_size: 100
+        batch_size: 1
         "*num_candidates":
             - 10
             - 14
@@ -28,11 +28,3 @@ config:
             - 40
             - 57
             - 80
-            - 113
-            - 160
-            - 226
-            - 320
-            - 453
-            - 640
-            - 905
-            - 1280
