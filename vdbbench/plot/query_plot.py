@@ -89,7 +89,7 @@ def plot_recall_latency(
 
 def parse_query_results(data: dict | pd.DataFrame) -> pd.DataFrame:
     if isinstance(data, pd.DataFrame):
-        return data
+        return data.copy()
     data = data["data"]
     rows = []
     for data_config in data:
