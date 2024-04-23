@@ -5,6 +5,12 @@ config:
         machine_type: n2-standard-2  # Type of machine to use for each node
     data:
         dataset: glove-100d  # Name of the dataset to use
+        "*ef":
+            - 100
+            - 200
+            - 400
+            - 800
+            - 1600
         # Weaviate-specific configurations related to data loading, schema creation, and vector indexing
         # (No direct equivalents of merge_index, shard_count, ef_construction, m in Weaviate)
     group:

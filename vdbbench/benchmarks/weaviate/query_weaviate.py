@@ -37,6 +37,7 @@ class QueryWeaviate(QueryBenchmark):
             dataset: Dataset,
             merge_index: bool = True,
             shard_count: int = 3,
+            ef: int = -1,
             ef_construction: int = 100,
             m: int = 16,
     ) -> dict:
@@ -46,6 +47,7 @@ class QueryWeaviate(QueryBenchmark):
 
         self.logger.info(f"Deleting class {class_name} if exists")
         weaviate_client.schema.delete_class(class_name)
+        weaviate_client.schema.delete_class('Vdbbench')
 
         self.logger.info(f"Creating class {class_name}")
         weaviate_client.schema.create_class({
@@ -53,7 +55,7 @@ class QueryWeaviate(QueryBenchmark):
             "vectorIndexType": "hnsw",
             "vectorIndexConfig": {
                 "distance": "cosine",
-                "ef": -1,
+                "ef": ef,
                 "efConstruction": 128,
                 "vectorCacheMaxObjects": 1000000,
             },
