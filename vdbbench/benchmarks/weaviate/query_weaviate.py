@@ -35,8 +35,8 @@ class QueryWeaviate(QueryBenchmark):
     def load_data(
             self,
             dataset: Dataset,
+            replica_count: int = 1,
             merge_index: bool = True,
-            shard_count: int = 3,
             ef: int = -1,
             ef_construction: int = 100,
             m: int = 16,
@@ -56,8 +56,7 @@ class QueryWeaviate(QueryBenchmark):
             "vectorIndexConfig": {
                 "distance": "cosine",
                 "ef": ef,
-                "efConstruction": 128,
-                "vectorCacheMaxObjects": 1000000,
+                "efConstruction": ef_construction,
             },
             "properties": [
                 {
@@ -71,7 +70,10 @@ class QueryWeaviate(QueryBenchmark):
                     "vectorIndexType": "hnsw",
                     "vectorizePropertyName": False
                 },
-            ]
+            ],
+            "replicationConfig": {
+                "factor": replica_count  # Integer, default 1. How many copies of this class will be stored.
+            }
         })
 
         self.logger.info(f"Loading {len(data)} vectors into {class_name}")
@@ -98,9 +100,14 @@ class QueryWeaviate(QueryBenchmark):
 
         self.logger.info(f"Data loading completed for {class_name}")
 
-    def prepare_group(self, replica_count: int = 2):
-        # Not needed in Weaviate
-        pass
+    def prepare_group(self, ef: int = -1):
+        if ef != -1:
+            self.logger.info(f"Updating class definition to ef: {ef}")
+            self.weaviate_client.schema.update_config(self.class_name, {
+                "vectorIndexConfig": {
+                    "ef": ef
+                }
+            })
 
     def prepare_query(self):
         # Not needed in Weaviate
