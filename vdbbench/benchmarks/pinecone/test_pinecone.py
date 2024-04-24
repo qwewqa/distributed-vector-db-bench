@@ -55,7 +55,7 @@ def formatResults(results):
 
 def run():
 	glove100_dataset = load_dataset("ANN_GloVe_d100_angular")
-
+	print("strating pinecone")
 	pc = Pinecone(api_key=PINECONE_API_KEY)
 	pc.create_index(
 		name="glove100d-aws",
@@ -70,6 +70,7 @@ def run():
 	) 
 
 	index = pc.Index("glove100d-aws")
+	print("created index")
 
 	nn = glove100_dataset.queries["blob"][0]["nearest_neighbors"]
 
