@@ -72,12 +72,11 @@ def run():
 
 	index = pc.Index("glove100d-aws")
 	print("created index")
-
-	nn = glove100_dataset.queries["blob"][0]["nearest_neighbors"]
-
 	dataset = glove100_dataset.documents
+	print("made dataset")
 	upload_latency = upload_data(dataset, index)
 	query_vectors = [item.tolist() for item in glove100_dataset.queries["vector"]]
+	nn = glove100_dataset.queries["blob"][0]["nearest_neighbors"]
 	# query_results = glove100_dataset.queries["blob"]
 	times, results = query(query_vectors, index, 10)
 	print("Mean query latency",np.mean(times))
