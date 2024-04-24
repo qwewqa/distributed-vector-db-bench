@@ -57,6 +57,7 @@ def run():
 	glove100_dataset = load_dataset("ANN_GloVe_d100_angular")
 	print("strating pinecone")
 	pc = Pinecone(api_key=PINECONE_API_KEY)
+	pc.delete_index("glove100d-aws")
 	pc.create_index(
 		name="glove100d-aws",
 		dimension=100,
