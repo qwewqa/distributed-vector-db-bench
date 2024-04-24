@@ -65,7 +65,7 @@ def run():
 		# trying to start with some boilerplate code rn git commit -am ""
 		spec=ServerlessSpec(
 			cloud='aws', 
-			region='us-east-2'
+			region='us-east-1'
 		) 
 	) 
 
