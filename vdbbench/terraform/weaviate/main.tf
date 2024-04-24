@@ -72,8 +72,8 @@ resource "helm_release" "weaviate" {
   version    = "16.8.8"
 
   set {
-    name  = "replicaCount"
-    value = "1"
+    name  = "replicas"
+    value = var.node_count
   }
 
   set {
