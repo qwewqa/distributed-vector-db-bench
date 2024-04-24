@@ -6,7 +6,7 @@ import numpy as np
 import time
 
 BATCH_SIZE = 100
-PINECONE_API_KEY = "284aedd1-2870-4523-8656-9110293fce67"
+
 
 def upload_data(dataset, index):
     print(f"\n Uploading Data...")
