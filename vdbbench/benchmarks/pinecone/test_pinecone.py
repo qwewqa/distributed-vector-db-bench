@@ -18,19 +18,18 @@ def upload_data(dataset, index):
 
 def query(query_vectors, index, k=100):
     print(f"\n Batch Querying...")
-    batch_times = []
+    times = []
     results = []
-    for i in range(0,10000, BATCH_SIZE):
-        batch_items = query_vectors[i:i+BATCH_SIZE]
+    for i in range(0,10000):
+        item = query_vectors[i]
         start = time.perf_counter()
         # query_results = index.query(queries=batch_items, top_k=10, disable_progress_bar=True)
-        for item in batch_items:
-            res = index.query(vector=item, top_k=k, include_values=True)
-            results.append(res)
+        res = index.query(vector=item, top_k=k, include_values=True)
         end = time.perf_counter()
-        batch_times.append(end-start)
+        results.append(res)
+        times.append(end-start)
         print("batch done", i)
-    return [batch_times, results]
+    return [times, results]
 
 def formatResults(results):
 	formatted_results = []
@@ -65,7 +64,7 @@ def run():
 		# trying to start with some boilerplate code rn git commit -am ""
 		spec=ServerlessSpec(
 			cloud='aws', 
-			region='us-west-2'
+			region='us-east-2'
 		) 
 	) 
 
@@ -78,6 +77,7 @@ def run():
 	query_vectors = [item.tolist() for item in glove100_dataset.queries["vector"]]
 	# query_results = glove100_dataset.queries["blob"]
 	times, results = query(query_vectors, index, 10)
+	print(times)
 	formatted_results = formatResults(results)
 	nn100 = []
 	for x in glove100_dataset.queries["blob"]: 
