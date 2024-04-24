@@ -1,11 +1,12 @@
 from pinecone import Pinecone, ServerlessSpec
 from pinecone_datasets import load_dataset
-from constants import PINECONE_API_KEY
+# from constants import PINECONE_API_KEY
 import pandas as pd
 import numpy as np
 import time
 
 BATCH_SIZE = 100
+PINECONE_API_KEY = "284aedd1-2870-4523-8656-9110293fce67"
 
 def upload_data(dataset, index):
     print(f"\n Uploading Data...")
@@ -57,7 +58,7 @@ def run():
 
 	pc = Pinecone(api_key=PINECONE_API_KEY)
 	pc.create_index(
-		name="glove100d",
+		name="glove100d-aws",
 		dimension=100,
 		metric="cosine",
 		# change later, serverless only available on AWS 
@@ -68,7 +69,7 @@ def run():
 		) 
 	) 
 
-	index = pc.Index("glove100d")
+	index = pc.Index("glove100d-aws")
 
 	nn = glove100_dataset.queries["blob"][0]["nearest_neighbors"]
 
@@ -77,7 +78,7 @@ def run():
 	query_vectors = [item.tolist() for item in glove100_dataset.queries["vector"]]
 	# query_results = glove100_dataset.queries["blob"]
 	times, results = query(query_vectors, index, 10)
-	print(times)
+	print("Mean query latency",np.mean(times))
 	formatted_results = formatResults(results)
 	nn100 = []
 	for x in glove100_dataset.queries["blob"]: 
