@@ -84,3 +84,6 @@ def run():
 	for x in glove100_dataset.queries["blob"]: 
 		s = set(x["nearest_neighbors"])
 		nn100.append(s)
+
+if __name__ == "__main__":
+    run()
