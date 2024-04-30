@@ -10,8 +10,35 @@ from scipy import stats
 from vdbbench.plot.query_plot import parse_query_results, plot_recall_latency, plot_result
 
 
-data_ub = pd.read_pickle("final_results/elasticsearch_query_glove_100d_k10.pkl.xz")
-data_b = pd.read_pickle("final_results/elasticsearch_query_glove_100d_k10_batched.pkl.xz")
+
+# data_1node = ("final_results/1node.pkl.xz")
+# data_2node = ("final_results/2node.pkl.xz")
+# data_3node = ("final_results/3node.pkl.xz")
+# data_1node["nodes"] = 1
+# data_2node["nodes"] = 2
+# data_3node["nodes"] = 3
+# df = pd.concat([data_1node, data_2node, data_3node], ignore_index=True)
+# df = df[ ['nodes'] + [ col for col in df.columns if col != 'nodes'] ]
+
+
+
+# base_path = "final_results/elasticsearch_query_glove_100d_k10"
+# parse_query_results(
+#     json.load(open(f"{base_path}.json"))
+# ).to_pickle(f"{base_path}asdfsad.pkl.xz")
+
+def res(n):
+    pkl = Path(f"final_results/{n}.pkl.xz")
+    jsn = Path(f"final_results/{n}.json")
+    if pkl.exists():
+        return pd.read_pickle(pkl)
+    elif jsn.exists():
+        res = parse_query_results(json.load(open(jsn)))
+        res.to_pickle(pkl)
+        return res
+
+data_ub = res("elasticsearch_query_glove_k100")
+data_b = res("elasticsearch_query_glove_k100_batched")
 
 
 data_ub['batched'] = "Unbatched"
@@ -112,12 +139,13 @@ def get_linear_regression_coefs(df):
         slope, intercept = np.polyfit(x, y, 1)
         print(f"{s}: {slope}x + {intercept}")
 
-plot_latency_ef(df, group_by=["replica_count"])
-plot_latency_ef(df, group_by=["shard_count"])
-# plot_recall_latency(df[
-#     (df['batch_size'] == 100) &
-#     (((df['shard_count'] == 1) & (df['replica_count'] == 2)) | ((df['shard_count'] == 3) & (df['replica_count'] == 0)) | ((df['shard_count'] == 2) & (df['replica_count'] == 1)))
-#     ], group_by=[])
+# plot_recall_latency(data_b, group_by=["replica_count"])
+# plot_recall_latency(data_b, group_by=["shard_count"])
+# plot_latency_ef(df, group_by=["replica_count"])
+# plot_latency_ef(df, group_by=["shard_count"])
+plot_recall_latency(df[
+    (df['batch_size'] == 100)
+    ], group_by=[])
 
 # Show qq plot at shard_count 1, batch_size 1, replica_count 2, num_candidates 1600
 data = df[

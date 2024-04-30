@@ -6,23 +6,18 @@ config:
     data:
         dataset: fashion-mnist
         "*shard_count":
-            - 1
-            - 2
             - 3
+            - 6
         ef_construction: 100
         m: 16
     group:
         "*replica_count":
             - 0
-            - 1
-            - 2
     query:
         rounds: 1
-        k: 100
+        k: 10
         batch_size: 1
         "*num_candidates":
             - 100
             - 200
             - 400
-            - 800
-            - 1600

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import itertools
 import logging
+from time import perf_counter
 
 import numpy as np
 from elasticsearch import Elasticsearch
@@ -38,13 +40,30 @@ class QueryElasticsearch(QueryBenchmark):
         wait_for_elasticsearch_cluster(es)
         self.es = es
 
+    def insert_ops(self, data: np.ndarray, offset: int):
+        next_update = 0.1
+        for i, vec in enumerate(data):
+            if i / len(data) >= next_update:
+                self.logger.info(f"Loading: {i}/{len(data)}")
+                next_update += 0.1
+            yield {
+                "_index": self.INDEX_NAME,
+                "_id": i + offset,
+                "_source": {
+                    "id": i + offset,
+                    "vec": vec.tolist(),
+                },
+            }
+
     def load_data(
         self,
         dataset: Dataset,
         shard_count: int = 3,
         ef_construction: int = 100,
         m: int = 16,
+        merge_before: float = 0.0,
     ) -> dict:
+        np.random.seed(0)
         es = self.es
         name = self.INDEX_NAME
         data = dataset.train
@@ -87,27 +106,41 @@ class QueryElasticsearch(QueryBenchmark):
 
         self.logger.info(f"Loading {len(data)} vectors into the index")
 
-        def chunked():
-            for i, vec in enumerate(data):
-                if i % (len(data) // 10 + 1) == 0:
-                    self.logger.info(f"Loading: {i}/{len(data)}")
-                yield {
-                    "_index": name,
-                    "_id": i,
-                    "_source": {
-                        "id": i,
-                        "vec": vec.tolist(),
-                    },
-                }
+        cutoff = len(data) - int(merge_before * len(data))
+        initial_data = data[:cutoff]
+        after_data = data[cutoff:]
 
-        bulk(
-            es,
-            chunked(),
-            chunk_size=1000,
-        )
+        if merge_before < 1.0:
+            insert_start = perf_counter()
+            self.logger.info(f"Inserting {len(initial_data)} vectors before force merge")
+            bulk(
+                es,
+                self.insert_ops(initial_data, 0),
+                chunk_size=1000,
+            )
+            insert_end = perf_counter()
+            self.logger.info(f"Inserting took {insert_end - insert_start:.2f}s")
 
-        self.logger.info("Refreshing index")
-        es.indices.refresh(index=name)
+            self.logger.info("Refreshing index")
+            es.indices.refresh(index=name)
+
+            self.logger.info("Forcing merge index")
+            force_merge_start = perf_counter()
+            self.es.indices.forcemerge(index=self.INDEX_NAME, max_num_segments=1, request_timeout=6000)
+            force_merge_end = perf_counter()
+            self.logger.info(f"Force merge took {force_merge_end - force_merge_start:.2f}s")
+            self.logger.info(f"Total time taken: {force_merge_end - insert_start:.2f}s")
+
+        if merge_before > 0.0:
+            self.logger.info(f"Inserting {len(after_data)} vectors after force merge")
+            bulk(
+                es,
+                self.insert_ops(after_data, cutoff),
+                chunk_size=1000,
+            )
+
+            self.logger.info("Refreshing index")
+            es.indices.refresh(index=name)
 
         self.logger.info("Waiting for the index status to be green")
         es.cluster.health(wait_for_status="green", index=name)
@@ -123,8 +156,6 @@ class QueryElasticsearch(QueryBenchmark):
     def prepare_query(self):
         self.logger.info("Clearing cache")
         self.es.indices.clear_cache(index=self.INDEX_NAME)
-        self.logger.info("Forcing merge index")
-        self.es.indices.forcemerge(index=self.INDEX_NAME, max_num_segments=1, request_timeout=3000)
 
     def query(
         self, queries: np.ndarray, k: int = 10, num_candidates: int = 160

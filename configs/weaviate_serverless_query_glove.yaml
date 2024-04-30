@@ -3,27 +3,15 @@ config:
     deploy:
         # Set these to the cluster url and api key
         # Or pass deploy.wcs_url=... deploy.wcs_api_key=... as command line arguments
-        wcs_url: "https://lilsukkstq2xzukwadfmia.c0.us-west3.gcp.weaviate.cloud"
-        wcs_api_key: "UflLLp2LTJZ5WzcbditwuBPp5U151tC0YeHE"
+        wcs_url: "https://vdbb-t3kdake1.weaviate.network"
+        wcs_api_key: "l4k0kBhb8Yc8QSHWuEnlIMzFuhRIhwlUhdc1"
     data:
         dataset: glove-100d
         ef_construction: 100
         m: 16
     group:
         "*ef":
-            - 10
-            - 15
-            - 20
-            - 30
-            - 40
-            - 60
-            - 80
-            - 120
-            - 160
-            - 240
-            - 320
-            - 480
-            - 640
+            - -1
     query:
         rounds: 1
         k: 10

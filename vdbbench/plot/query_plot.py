@@ -40,11 +40,12 @@ def plot_recall_latency(
     data: dict | pd.DataFrame,
     name: str = "Elasticsearch",
     vary: str = "num_candidates",
-    group_by: list[str] = ["replica_count"],
+    group_by: list[str] = [],
     labels: dict[str, str] = {
         "shard_count": "Shard Count",
         "replica_count": "Replica Count",
         "num_candidates": "Num Candidates",
+        "merge_before": "Merge Before",
     },
     out_dir: Path = Path("plots"),
 ):
@@ -68,10 +69,14 @@ def plot_recall_latency(
             + " - "
             + ", ".join(f"{labels.get(k, k)} = {group[k].iloc[0]}" for k in group_by)
         )
-        group["series"] = [
-            ", ".join(f"{labels.get(k, k)} = {v}" for k, v in zip(series_columns, row))
-            for row in group[series_columns].itertuples(index=False)
-        ]
+        if not series_columns:
+            group["series"] = ""
+        else:
+            group["series"] = [
+                ", ".join(f"{labels.get(k, k)} = {v}" if not isinstance(v, str) else v
+                          for k, v in zip(series_columns, row))
+                for row in group[series_columns].itertuples(index=False)
+            ]
         f = plot_result(
             group,
             plot_name,

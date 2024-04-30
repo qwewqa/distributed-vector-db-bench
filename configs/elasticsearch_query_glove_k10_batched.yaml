@@ -7,10 +7,10 @@ config:
         dataset: glove-100d
         "*shard_count":
             - 1
-            - 2
             - 3
+            - 6
         ef_construction: 100
-        m: 16
+        m: 64
     group:
         "*replica_count":
             - 0
